@@ -1,0 +1,4 @@
+./TSL.war /var/lib/tomcat6/webapps/
+./torrentscout.war /var/lib/tomcat6/webapps/
+./internal.war /var/lib/tomcat6/webapps/
+./torrentscout /results/plugins

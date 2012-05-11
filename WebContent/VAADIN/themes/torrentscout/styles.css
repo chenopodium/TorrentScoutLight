@@ -1,0 +1,46 @@
+@import "../reindeer/styles.css";
+
+.v-table-welltable .v-table-cell-content {
+    height: 25px;
+    font-family: "Trebuchet MS", geneva, helvetica, arial, tahoma, verdana, sans-serif;    
+    font-size: 10px;
+    color: #000000;
+}
+.no-toolbar .gwt-RichTextToolbar-bottom { display: none;}
+.no-toolbar .gwt-RichTextToolbar-top { display: none;}
+
+.v-app {
+    background-color: black;
+    background-image: url(../torrentscout/img/splash.png);
+    background-position:top left;
+    background-repeat:no-repeat;
+    width: 1900px;
+   
+}
+.v-loading-indicator,
+.v-loading-indicator-delay,
+.v-loading-indicator-wait {
+    /*	position: absolute;
+            top: 0;
+            right: 0;
+            z-index: 30000;
+            width: 31px;
+            height: 31px;
+            background: transparent url(img/loading-indicator.gif);
+            margin-right: 5px;
+            margin-top: 5px;*/
+    position: fixed !important;	
+    background: transparent url(../torrentscout/img/loading-indicator.gif);
+    background-repeat:no-repeat;    
+    width: 62x;
+    height: 62px;
+    top: 40%;
+    left: 40%;
+    z-index: 30000;
+}
+.v-label-smallgray {
+ 	font-size: 10px;
+ 	color: #666666;
+ 	text-align:right;
+ 	text-indent:10px;
+}

@@ -1,0 +1,146 @@
+ion-torrentscout-light (2.2.5) lucid; urgency=low
+
+  * fixed module usage log
+  * fixed mask selection
+
+ -- root <Chantal Roth <chantal.roth@lifetech.com>  Mon, 07 May 2012 05:46:01 -0700
+
+ion-torrentscout-light (2.2.4a) lucid; urgency=low
+
+  * fixed html in alignment (unmatching font tages)
+  * fixed flow nr problem for reverse alignments
+  * improved html ouput (flowgram, flow nr information)
+  * custom session timeout in help
+  * increased session timeout to 60
+  * warning when moving main cursor in Process
+  * improved string operations
+
+ -- root <Chantal Roth <chantal.roth@lifetech.com>  Mon, 07 May 2012 04:02:53 -0700
+
+ion-torrentscout-light (2.2.4) lucid; urgency=low
+
+  * export of alignments in .csv format 
+  * bug fixes
+
+ -- root <Chantal Roth <chantal.roth@lifetech.com>  Fri, 04 May 2012 00:44:06 -0700
+
+ion-torrentscout-light (2.2.3) lucid; urgency=low
+
+  * module usage stats
+  * show version nr in gui 
+
+ -- root <Chantal Roth <chantal.roth@lifetech.com>  Tue, 01 May 2012 01:34:51 -0700
+
+ion-torrentscout-light (2.2.2) lucid; urgency=low
+
+  * fixed change location bug in mask editor
+  * less logging
+  * fixed tm in description bug
+  
+ -- Chantal Roth <Chantal Roth <chantal.roth@lifetech.com>  Sat, 28 Apr 2012 10:08:52 -0500  
+
+ion-torrentscout-light (2.2.1) lucid; urgency=low
+
+  * fixed too many open files related to exporting alignments
+  * reduced logging output
+  * removing old TSL/torrentscout folder in postinst (otherwise war may not deploy correctly)
+  * changed description, contact person
+
+ -- Chantal Roth <Chantal Roth <chantal.roth@lifetech.com>  Fri, 27 Apr 2012 10:08:52 -0500
+  
+ion-torrentscout-light (2.2.0) lucid; urgency=low
+
+  * export in a separate thread
+  * export ionograms, alignments and raw data
+
+ -- Chantal Roth <Chantal Roth <chantal.roth@lifetech.com>  Tue, 25 Apr 2012 10:08:52 -0500
+  
+ion-torrentscout-light (2.0.6) lucid; urgency=low
+
+  * fixed unecessary SAM error msg
+  * fixed problem with hard clipping (CIGAR)
+  * more error tolerance
+  * only show TSL link
+  * increased speed significantly (several fold)
+  * fixed several too many open files problems on Proton experiments
+  * reduced (debug) log output
+  * link to help doc from plugin results page
+  * performance logging and display (memory, cpu)
+  * instance.html to compute alignment searches via crunchers
+  * added about.html with summary and link to documentation
+  * fixed horizontal stripes issue in process view
+  * simplified and compacted gui components
+  * use of more threads to avoid hanging client
+  * find reads by scores (such as % identity, nr of indels etc)
+  * find reads by genome position
+  * added help to each component
+  * added overall help
+  * much better file browser (much faster, also works in cases where there are thousands of files)
+  * link to help pdf doc
+  * alignment pattern search
+  * saving/loading search results and masks
+  * heat map gradient legend and computation of density in 9 areas
+
+ -- Chantal Roth <Chantal Roth <chantal.roth@lifetech.com>  Tue, 19 Apr 2012 10:08:52 -0500
+	
+ion-torrentscout-light (2.0.5) lucid; urgency=low
+
+  * fixed link from plugin to TSL so that it works both inside and outside network
+  * fixed an error msg caused by a new Cigar element
+  * TSL link accessible directly in the results page (with _block.html)
+  * fixed a problem that sometimes occurred with the new "skipping regions" format
+  * fixed hash key generation: on different system the key was different resulting in recreation of index files
+  * for proton runs, tomcat needs more memory (changed to a max of 6 GB) (or else it fails when generating heat maps)
+
+ -- Chantal Roth <Chantal Roth <chantal.roth@lifetech.com>  Tue, 03 Jan 2012 10:08:52 -0500
+  
+ion-torrentscout-light (2.0.4) lucid; urgency=low
+
+  * Updated local from svn repository to get latest war files
+
+ -- Bernard Puc <Bernard Puc <bernard.puc@lifetech.com>  Tue, 03 Jan 2012 10:08:52 -0500
+
+ion-torrentscout-light (2.0.3) lucid; urgency=low
+
+  * Latest war file update
+
+ -- Bernard Puc <Bernard Puc <bernard.puc@lifetech.com>  Tue, 03 Jan 2012 10:00:54 -0500
+
+ion-torrentscout-light (2.0.2) lucid; urgency=low
+
+  * I updated the splash screen and chip images (see attached image)
+  * committed TSL.war to SVN (I tested it on onfire by manually copying the file so I could test)
+  * updated the python scrip to check for version, and it creates a page with the updated url for the splash image
+  * I committed changes to the plugin code (python and launch.sh) to both svn sites (rndplugins and new location)
+
+ -- Bernard Puc <Bernard Puc <bernard.puc@lifetech.com>  Tue, 20 Dec 2011 08:43:40 -0500
+
+ion-torrentscout-light (2.0.1) lucid; urgency=low
+
+  * Added prerm script, updated source
+
+ -- Bernard Puc <Bernard Puc <bernard.puc@lifetech.com>  Mon, 19 Dec 2011 14:19:07 -0500
+
+ion-torrentscout-light (2.0.0) lucid; urgency=low
+
+  * Updated war file 
+
+ -- Bernard Puc <Bernard Puc <bernard.puc@lifetech.com>  Fri, 16 Dec 2011 16:58:32 -0500
+
+ion-torrentscout-light (1.9.1) lucid; urgency=low
+
+  * Testing distribution
+
+ -- Bernard Puc <Bernard Puc <bernard.puc@lifetech.com>  Wed, 07 Dec 2011 13:19:27 -0500
+
+ion-torrentscout-light (0.0.1) lucid; urgency=low
+
+  * Undid setting tomcat6 user variable 
+
+ -- Bernard Puc <Bernard Puc <bernard.puc@lifetech.com>  Wed, 07 Dec 2011 12:52:34 -0500
+
+ion-torrentscout-light (0.0.0) lucid; urgency=low
+
+  * Fixed editing
+
+ -- Bernard Puc <Bernard Puc <bernard.puc@lifetech.com>  Mon, 05 Dec 2011 10:04:50 -0500

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://java.sun.com/xml/ns/javaee" xmlns:web="http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd" id="WebApp_ID" version="3.0">
+  <display-name>TorrentScoutLight</display-name>
+  <session-config>
+    <session-timeout>60</session-timeout>
+  </session-config>
+  <context-param>
+    <description>
+  	Vaadin production mode</description>
+    <param-name>productionMode</param-name>
+    <param-value>false</param-value>
+  </context-param>
+  <servlet>
+    <servlet-name>Torrent Scout Light</servlet-name>
+    <servlet-class>com.iontorrent.vaadin.MyApplicationServlet</servlet-class>
+    <init-param>
+      <description>
+  		Vaadin application class to start</description>
+      <param-name>application</param-name>
+      <param-value>com.iontorrent.vaadin.TSVaadin</param-value>
+    </init-param>
+    <init-param>
+      <description>
+			Application widgetset</description>
+      <param-name>widgetset</param-name>
+      <param-value>com.vaadin.graphics.canvas.widgetset.VaadincanvasWidgetset</param-value>
+    </init-param>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>Torrent Scout Light</servlet-name>
+    <url-pattern>/*</url-pattern>
+  </servlet-mapping>
+  <welcome-file-list>
+    <welcome-file>index.html</welcome-file>
+    <welcome-file>index.htm</welcome-file>    
+    <welcome-file>index.jsp</welcome-file>
+    <welcome-file>default.html</welcome-file>
+    <welcome-file>default.htm</welcome-file>
+    <welcome-file>default.jsp</welcome-file>
+  </welcome-file-list>
+  <servlet>
+    <servlet-name>gwt-log-remote-logger-servlet</servlet-name>
+    <servlet-class>com.allen_sauer.gwt.log.server.RemoteLoggerServiceImpl</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>gwt-log-remote-logger-servlet</servlet-name>
+    <url-pattern>/TorrentScoutLight/gwt-log</url-pattern>
+  </servlet-mapping>
+</web-app>

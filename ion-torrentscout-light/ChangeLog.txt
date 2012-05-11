@@ -1,0 +1,55 @@
+Main Changes for 2.2.1:
+========================
+- fixed too many open files related to exporting alignments
+- removing old TSL/torrentscout folder in postinst (otherwise war may not deploy correctly)
+- changed description, contact person
+
+Main Changes from 2.1.4:
+========================
+- export in a separate thread
+- export ionograms, alignments and raw data
+
+Main Changes from 0.2.1 to 1.2.2:
+=================================
+- fixed unecessary SAM error msg
+- fixed problem with hard clipping (CIGAR)
+- more error tolerance
+- only show TSL link
+- increased speed significantly (several fold)
+- fixed several too many open files problems on Proton experiments
+- reduced (debug) log output
+- link to help doc from plugin results page
+- performance logging and display (memory, cpu)
+- instance.html to compute alignment searches via crunchers
+- added about.html with summary and link to documentation
+ 
+TSL improvements:
+- fixed horizontal stripes issue in process view
+- simplified and compacted gui components
+- use of more threads to avoid hanging client
+- find reads by scores (such as % identity, nr of indels etc)
+- find reads by genome position
+- added help to each component
+- added overall help
+- much better file browser (much faster, also works in cases where there are thousands of files)
+- link to help pdf doc
+- alignment pattern search
+- saving/loading search results and masks
+- heat map gradient legend and computation of density in 9 areas
+
+Main Changes from 0.2.0 to 0.2.1:
+=================================
+- fixed link from plugin to TSL so that it works both inside and outside network
+- fixed an error msg caused by a new Cigar element
+- TSL link accessible directly in the results page (with _block.html)
+- fixed a problem that sometimes occurred with the new "skipping regions" format
+- fixed hash key generation: on different system the key was different resulting in recreation of index files
+- for proton runs, tomcat needs more memory (changed to a max of 6 GB) (or else it fails when generating heat maps)
+
+TSL improvements:
+- simplifications: experiment opens without single click when launched from plugin page
+- ionogram includes raw nn subtracted traces
+
+
+
+

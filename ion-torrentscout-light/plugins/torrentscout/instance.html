@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+  <script type="text/javascript" src="/site_media/jquery/js/jquery-1.6.1.min.js"></script>
+
+  <style type='text/css'>
+        #formwrap {
+                line-height: 2em;
+                background: #def;
+                margin: 10px;
+                padding: 10px;
+                height: 360px;
+                text-align: center;
+				overflow: auto;
+        }
+
+        #json_result {
+                margin: 10px;
+                background: #def;
+                padding: 10px;
+                height: 40px;
+                overflow: auto;
+        }
+
+        body {
+                font-family: "Lucida Grande", "Lucida Sans Unicode", Verdana, Arial, Helvetica, sans-serif;
+                font-size: 12px;
+        }
+
+  </style>
+
+  <script type='text/javascript'>
+
+        $.fn.serializeObject = function()
+            {
+                var o = {};
+                var a = this.serializeArray();
+                $.each(a,
+                function() {
+                    if (o[this.name] != null) {
+                        if (!o[this.name].push) {
+                            o[this.name] = [o[this.name]];
+                        }
+                        o[this.name].push(this.value || '');
+                    } else {
+                        o[this.name] = this.value || '';
+                    }
+                });
+                return o;
+            };
+
+            $(function() {
+                $('#postbutton').click(function() {
+                        obj =  $('#inputform').serializeObject();
+
+                        pluginAPIJSON = { "plugin" : [TB_plugin.fields.name], "pluginconfig" : obj };
+                        pluginAPIJSON = JSON.stringify(pluginAPIJSON);
+
+                        pluginURL = "/rundb/api/v1/results/" + TB_result + "/plugin/";
+                        $("#json_result").html(pluginAPIJSON);
+
+                        $.ajax({
+                              type: 'POST',
+                              url: pluginURL,
+                              contentType: "application/json; charset=utf-8",
+                              data: pluginAPIJSON,
+                              dataType: "json",
+                              success: function () {parent.$.fn.colorbox.close();}
+                        });
+
+                });
+            });
+
+  </script>
+
+</head>
+        <body>
+                <h2>TorrentScout Alignment Search Parameters</h2>
+        <div id="formwrap">
+                 <form id="inputform" align="left">
+<p>
+                          Search for alignment patterns for the following flows (end=0 means all):<br>						  
+                                 Start flow: <input name="startflow" value="0" style="WIDTH: 57px; HEIGHT: 22px" size="7">
+                                 &nbsp;End flow: &nbsp;  <input name="endflow" value="0" style="WIDTH: 46px; HEIGHT: 22px" size="5"></p>
+<p>
+<table border="0" cellspacing="0" cellpadding="3" width="100%" align="center">
+  
+  <tr>
+    <td><font size="2"><strong>Read sequence (eg TT_)</strong><br>(X = 4 searches with G/A/T/C)</font>   </td>
+    <td><font size="2"><strong>Alignment sequence (eg  TTT)</strong><br>(? = any base or gap, _ =gap)</font>   </td>
+    <td><font size="2"><strong>Name of heat map</strong><br>(X will be replaced with G/A/T/C)</font>   </td></tr>
+  <tr>
+    <td><input name="read_0" value="TT_"></td>
+    <td><input name="align_0" value="TTT"></td>
+    <td><input name="heatmap_0" maxlength="40" value="missed_T"></td></tr>
+  <tr>
+    <td><input name="read_1" value="" ></td>
+    <td><input name="align_1" value=""></td>
+    <td><input name="heatmap_1" maxlength="40"  value=""
+     ></td></tr>
+  <tr>
+    <td><input name="read_2" ></td>
+    <td><input name="align_2" ></td>
+    <td><input name="heatmap_2" maxlength="40" 
+     ></td></tr>
+  <tr>
+    <td><input name="read_3" ></td>
+    <td><input name="align_3" ></td>
+    <td><input name="heatmap_3" maxlength="40" 
+     ></td></tr>
+  <tr>
+    <td><input name="read_4" ></td>
+    <td><input name="align_4" ></td>
+    <td><input name="heatmap_4" maxlength="40"></td></tr>
+  
+  </table><br></p>
+  	</form>
+                <input id="postbutton" type="submit" value="Compute heat maps">
+        </div>
+
+        <h3>JSON Result</h3>
+        <div id="json_result"> </div>
+    </body>
+
+</html>

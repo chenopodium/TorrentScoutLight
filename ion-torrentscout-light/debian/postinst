@@ -1,0 +1,70 @@
+#!/bin/bash
+set -e
+case "$1" in
+	configure)
+    
+        # create link to startup background image
+        if [ -f /results/plugins/torrentscout/startup.png ]; then
+            if [ -f /var/www/tsl-startup.png ]; then
+                rm /var/www/tsl-startup.png
+            fi
+            ln -s /results/plugins/torrentscout/startup.png /var/www/tsl-startup.png 
+        fi
+        
+    	# stop the server
+        /etc/init.d/tomcat6 stop
+        
+    	# Edit /etc/default/tomcat6
+    	conffile=/etc/default/tomcat6
+        #changing user to ionadmin breaks the server - doesn't start
+        #sed -i "s/.*TOMCAT6_USER.*/TOMCAT6_USER=ionadmin/" $conffile
+		# change number of days logs are kept 
+		sed -i "s/#LOGFILE_DAYS=14/LOGFILE_DAYS=3/" $conffile
+        sed -i 's/.*JAVA_OPTS="-Djava.awt.headless.*"/JAVA_OPTS="-Djava.awt.headless=true -Xms2048m -Xmx8096m -XX:MaxPermSize=512M"/' $conffile
+
+		conffile=/var/lib/tomcat6/conf/logging.properties
+        #changing log level to off by default... 
+		sed -i "s/FINE/OFF/g" $conffile
+        sed -i "s/INFO/OFF/g" $conffile
+		# remove catalina.out file which can grow indefinitively
+		sed -i "s/.handlers = 1catalina.org.apache.juli.FileHandler, java.util.logging.ConsoleHandler/.handlers = 1catalina.org.apache.juli.FileHandler/g" $conffile
+		sed -i "s/#org.apache.catalina/org.apache.catalina/g" $conffile
+		sed -i "s/org.apache.catalina.startup.ContextConfig.level/com.iontorrent.level/g" $conffile
+		
+        # Edit /etc/tomcat6/tomcat-users.xml
+        # Default has numerous commented-out example entries so here, we remove any existing
+        # entries for tomcat user, and add our required entry outside of any comment tags.
+        conffile=/etc/tomcat6/tomcat-users.xml
+        # Delete any entries that conflict with ours
+        sed -i '/.*<user username="tomcat" password="tomcat".*/d' $conffile
+        
+		
+        # Add ours outside of comment tags: search for opening tag and insert on line after.
+        sed -i 's/\(<tomcat-users>\)/\1\n  <user username="tomcat" password="tomcat" roles="admin, manager, manager-gui"\/>/' $conffile        
+              
+        # ion internal server configuration
+        if [ -f /opt/ion/.ion-internal-server ]; then
+        	echo "Internal servers configuration option called: copying internal.war to torrentscout.war in /var/lib/tomcat6/webapps"
+            # Do something here ...
+			rm /var/lib/tomcat6/webapps/torrentscout.war
+            cp /var/lib/tomcat6/webapps/internal.war /var/lib/tomcat6/webapps/torrentscout.war
+        fi
+		rm /var/lib/tomcat6/webapps/internal.war
+		 
+		# If there is already an existing version of TSL, the folder must be deleted, otherwise the new .war file may
+		# not be deployed!
+		if [ -d /var/lib/tomcat6/webapps/TSL ]; then
+			echo "found existing folder /var/lib/tomcat6/webapps/TSL, will remove it (otherwise .war may not deploy correctly)"
+			rm -fr /var/lib/tomcat6/webapps/TSL
+		fi
+		if [ -d /var/lib/tomcat6/webapps/torrentscout ]; then
+			echo "found existing folder /var/lib/tomcat6/webapps/torrentscout, will remove it (otherwise .war may not deploy correctly)"
+			rm -fr /var/lib/tomcat6/webapps/torrentscout
+		fi
+		
+		# start the server		
+        /etc/init.d/tomcat6 start
+    ;;
+esac
+
+exit 0
