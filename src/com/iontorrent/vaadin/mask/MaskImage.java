@@ -17,6 +17,7 @@ import javax.imageio.ImageIO;
 import com.iontorrent.rawdataaccess.wells.BitMask;
 import com.iontorrent.torrentscout.explorer.ExplorerContext;
 import com.iontorrent.torrentscout.explorer.MaskEditDensityPanel;
+import com.iontorrent.wellmodel.WellCoordinate;
 import com.vaadin.terminal.StreamResource;
 
 /**
@@ -35,29 +36,20 @@ public class MaskImage implements StreamResource.StreamSource {
 	MaskEditDensityPanel pan;
 	RenderedImage image;
 	BitMask mask;
-	public MaskImage(ExplorerContext exp, BitMask mask) {
+	public MaskImage(ExplorerContext exp, BitMask mask, int bucket) {
 		this.exp = exp;
 		if (exp != null) {
 			this.mask = mask;
-			p("Creating mask image for :"+mask.getName()+" at "+mask.getRelCoord());
-			 pan = new MaskEditDensityPanel(exp.getExp(), mask);
+			//p("Creating mask image for :"+mask.getName()+" at "+mask.getRelCoord());
+			 pan = new MaskEditDensityPanel(exp.getExp(), mask, exp.getRasterSize());
 			 image = null;
-			 pan.setContext(mask, 1);
+			 pan.setContext(mask, bucket);
 			 pan.redrawImage();
 			 
 			
 		}
 	}
 	
-	           
-//	public Point getPointFromWell(WellCoordinate coord) {
-//		return pan.getPointFromWell(coord);
-//	}
-//
-//	public WellCoordinate getWellCoordinate(int x, int y) {
-//		return pan.getWellCoordinate(x, y);
-//	}
-
 	/*
 	 * We need to implement this method that returns the resource as a stream.
 	 */
@@ -74,12 +66,15 @@ public class MaskImage implements StreamResource.StreamSource {
 			}			
 			
 		}
-		p("Got image for "+mask.getName()+" with size "+image.getWidth()+"/"+image.getHeight());
+		//p("Got image for "+mask.getName()+" with size "+image.getWidth()+"/"+image.getHeight());
 		return image;
 	}
+	  public WellCoordinate getWellCoordinate(int x, int y) {
+	        return pan.getWellCoordinate(x, y);
+	    }
 
 	public InputStream getStream() {
-		p("GetStream called for mask "+mask.getName());
+	//	p("GetStream called for mask "+mask.getName());
 		
 		getImage();
 
@@ -93,7 +88,7 @@ public class MaskImage implements StreamResource.StreamSource {
 			imagebuffer.close();
 			return res;
 		} catch (IOException e) {
-			err("Could not create hist image", e);
+			err("Could not create mask editor image", e);
 			return null;
 		}
 	}

@@ -8,12 +8,15 @@ import com.vaadin.ui.Window;
 public class InputDialog extends Window {
     Recipient r;
     TextField tf = new TextField();
+    Window parent;
 
     public InputDialog(final Window parent, String question, Recipient recipient) {
     	this(parent, question, recipient, null);
     }
-    public InputDialog(final Window parent, String question, Recipient recipient, String name) {
+    public InputDialog(final Window par, String question, Recipient recipient, String name) {
         r = recipient;
+        if (par.getParent() != null) parent = par.getParent();
+        else parent = par;
         setCaption(question);
         setModal(true);
         getLayout().setSizeUndefined();
@@ -21,6 +24,7 @@ public class InputDialog extends Window {
         addComponent(tf);
         
         final Window dialog = this;
+        dialog.focus();
         addComponent(new Button("Ok", new Button.ClickListener() {
             public void buttonClick(ClickEvent event) {
                 r.gotInput(tf.toString());

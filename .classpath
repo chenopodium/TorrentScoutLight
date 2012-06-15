@@ -77,5 +77,7 @@
 	<classpathentry kind="lib" path="S:/java/gwt-2.4.0/gwt-2.4.0/gwt-user.jar"/>
 	<classpathentry kind="lib" path="S:/java/gwt-2.4.0/gwt-2.4.0/validation-api-1.0.0.GA.jar"/>
 	<classpathentry kind="lib" path="S:/workspace/TorrentScoutLight/WebContent/WEB-INF/lib/vaadin-6.7.8.jar"/>
+	<classpathentry kind="lib" path="WebContent/WEB-INF/lib/VaadinVisualizations2.1.jar"/>
+	<classpathentry kind="lib" path="WebContent/WEB-INF/lib/gwt-visualization.jar"/>
 	<classpathentry kind="output" path="build/classes"/>
 </classpath>

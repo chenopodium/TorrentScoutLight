@@ -4,7 +4,6 @@
  */
 package com.iontorrent.vaadin.raw;
 
-import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.logging.Level;
@@ -17,6 +16,7 @@ import com.iontorrent.expmodel.ExperimentContext;
 import com.iontorrent.rawdataaccess.pgmacquisition.DataAccessManager;
 import com.iontorrent.rawdataaccess.pgmacquisition.RawType;
 import com.iontorrent.rawdataaccess.wells.BfMaskFlag;
+import com.iontorrent.torrentscout.explorer.ExplorerContext;
 import com.iontorrent.utils.ErrorHandler;
 import com.iontorrent.wellalgorithms.NearestNeighbor;
 import com.iontorrent.wellalgorithms.WellContextFilter;
@@ -35,7 +35,6 @@ import com.vaadin.ui.JFreeChartWrapper;
 public class RawChart {
 
     private static int MAX = 100;
-    ByteArrayOutputStream imagebuffer = null;
     ExperimentContext exp;
     int reloads = 0;
     ArrayList<Integer> flows;
@@ -46,12 +45,14 @@ public class RawChart {
     RawType type;
     private LinkedList<String> msgs;
     private int subtract;
-
-    public RawChart(RawType type, ExperimentContext exp, ArrayList<Integer> flows, boolean bg, boolean raw, int subtract) {
+    JFreeChart freechart;
+    ExplorerContext maincont;
+    public RawChart(RawType type, ExperimentContext exp, ExplorerContext maincont,  ArrayList<Integer> flows, boolean bg, boolean raw, int subtract) {
         this.exp = exp;
         this.flows = flows;
         this.type = type;
         this.bg = bg;
+        this.maincont = maincont;
         this.subtract = subtract;
         msgs = new LinkedList<String>();
         this.showraw = raw;
@@ -110,10 +111,11 @@ public class RawChart {
             else p("Got data:"+data+":"+manager.getErrorMsg());
             WellFlowDataResult nn = null;
 
-            //   p("BG subtract? " + bg);
+            p("BG subtract? " + bg);
             if (bg) {
                 ResultType.NN_RAW_BG.setShow(true);
-                NearestNeighbor alg = new NearestNeighbor(filter, 5, false);
+                exp.setFlow(flow);
+                NearestNeighbor alg = new NearestNeighbor(this.exp,filter,maincont.getSpan() , false);
                 ArrayList<WellFlowDataResult> res = alg.compute();
                 if (res != null && res.size() > 1) {
                     nn = res.get(1);
@@ -122,6 +124,10 @@ public class RawChart {
                         nn.setName("Raw - nn " + flow);
                         p("Adding Raw - NN");
                         pan.addResults(res, flow);
+                    }
+                    else {
+                    	p("Got no NN result! Just show raw data then?");
+                    	showraw = true;
                     }
                 }
             } else {
@@ -150,14 +156,12 @@ public class RawChart {
         }
         //public String update(String region, ExperimentContext expContext, WellFlowData data, WellFlowDataResult nndata, WellContext context, ArrayList<Integer> flows, int nrempty, boolean showRawSignal) {
 
-
-
-        JFreeChart chart = pan.getChart();
-        if (chart == null) {
+       freechart = pan.getChart();
+        if (freechart == null) {
             p("Could not create JFreeChart object");
             return null;
         }
-        JFreeChartWrapper wrapper = new JFreeChartWrapper(chart);
+        JFreeChartWrapper wrapper = new JFreeChartWrapper(freechart);
         wrapper.setWidth("450px");
         wrapper.setHeight("320px");
         if (wrapper == null) {
@@ -166,6 +170,9 @@ public class RawChart {
         return wrapper;
     }
 
+    public JFreeChart getFreeChart() {
+    	return freechart;
+    }
     private void err(String msg, Exception ex) {
         //system.out.println("RawChart: " + msg);
         addMsg(msg + ErrorHandler.getString(ex));

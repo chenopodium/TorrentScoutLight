@@ -71,7 +71,7 @@ public class CompWindow extends WindowOpener implements ProgressListener, Proper
 	@Override
 	public void openButtonClick(Button.ClickEvent event) {
 		if (app.getCompositeExperiment() == null) {
-			mainwindow.showNotification("No Proton Experiment Selected", "<br/>Please open a proton experiment first" + "<br/>You can either browse the db or enter the paths manually", Window.Notification.TYPE_WARNING_MESSAGE);
+			appwindow.showNotification("No Proton Experiment Selected", "<br/>Please open a proton experiment first" + "<br/>You can either browse the db or enter the paths manually", Window.Notification.TYPE_WARNING_MESSAGE);
 			return;
 		}
 		super.openButtonClick(event);

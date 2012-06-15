@@ -12,6 +12,7 @@ import java.util.logging.Logger;
 import com.iontorrent.expmodel.ExperimentContext;
 import com.iontorrent.ionogram.MultiFlowLoader;
 import com.iontorrent.ionogram.MultiFlowPanel;
+import com.iontorrent.rawdataaccess.wells.WellData;
 import com.iontorrent.utils.ProgressListener;
 import com.iontorrent.utils.StringTools;
 import com.iontorrent.vaadin.TSVaadin;
@@ -28,6 +29,7 @@ import com.vaadin.ui.Label;
 import com.vaadin.ui.Panel;
 import com.vaadin.ui.ProgressIndicator;
 import com.vaadin.ui.TabSheet;
+import com.vaadin.ui.TextArea;
 import com.vaadin.ui.TextField;
 import com.vaadin.ui.VerticalLayout;
 import com.vaadin.ui.Window;
@@ -48,6 +50,7 @@ public class IonogramWindow extends WindowOpener implements ProgressListener {
 	private ExperimentContext exp;
 	HorizontalLayout multilayout;
 	ProgressIndicator indicator;
+	IonogramImage ionoimage;
 	HorizontalLayout h;
 	int x;
 	int y;
@@ -67,12 +70,12 @@ public class IonogramWindow extends WindowOpener implements ProgressListener {
 	@Override
 	public void openButtonClick(Button.ClickEvent event) {
 		if (app.getExperimentContext() == null) {
-			mainwindow.showNotification("No Experiment Selected", "<br/>Please open an experiment first", Window.Notification.TYPE_WARNING_MESSAGE);
+			appwindow.showNotification("No Experiment Selected", "<br/>Please open an experiment first", Window.Notification.TYPE_WARNING_MESSAGE);
 			return;
 		}
-		File f = new File(app.getExperimentContext().getResultsDirectory() + "1.wells");
+		File f = new File(app.getExperimentContext().getWellsFile());
 		if (!f.exists()) {
-			mainwindow.showNotification("1.wells not found", "<br/>Could not find the file " + f, Window.Notification.TYPE_WARNING_MESSAGE);
+			appwindow.showNotification("1.wells not found", "<br/>Could not find the file " + f, Window.Notification.TYPE_WARNING_MESSAGE);
 			return;
 		}
 		exp = app.getExperimentContext();
@@ -86,7 +89,7 @@ public class IonogramWindow extends WindowOpener implements ProgressListener {
 		h = new HorizontalLayout();
 		// mywindow.addComponent(new
 		// Label(app.getExperimentContext().getResultsDirectory()));
-		StreamResource.StreamSource imagesource = new IonogramImage(app.getExperimentContext());
+		ionoimage = new IonogramImage(app.getExperimentContext());
 
 		// Create a resource that uses the stream source and give it a name.
 		// The constructor will automatically register the resource in
@@ -100,7 +103,7 @@ public class IonogramWindow extends WindowOpener implements ProgressListener {
 		y = coord.getY();
 		p("Getting streamresource for " + x + "/" + y);
 
-		imageresource1 = new StreamResource(imagesource, app.getExperimentContext().getResultsName() + "_ionogram" + x + "_" + y + ".png", app);
+		imageresource1 = new StreamResource(ionoimage, app.getExperimentContext().getResultsName() + "_ionogram" + x + "_" + y + ".png", app);
 		imageresource1.setCacheTime(1000);
 		Embedded em = new Embedded(null, imageresource1);
 
@@ -127,6 +130,11 @@ public class IonogramWindow extends WindowOpener implements ProgressListener {
 		tab.addTab(multilayout);
 		tab.getTab(multilayout).setCaption("MultiFlow and Ionogram");
 
+		VerticalLayout infolayout = new VerticalLayout();
+		tab.addTab(infolayout);
+		tab.getTab(infolayout).setCaption("Information");
+		addInfo(infolayout);
+		
 		addFlowSelection(h);
 		addSubtractSelection(h);
 		mywindow.addComponent(h);
@@ -135,6 +143,23 @@ public class IonogramWindow extends WindowOpener implements ProgressListener {
 		parseFlow();
 		startMultiFlowUpdate();
 
+	}
+	private void addInfo(VerticalLayout v) {
+		 WellData data = ionoimage.getData();
+		 if (data == null) {
+			 v.addComponent(new Label("Got no well data info"));
+		 }
+		 else {
+			 ArrayList<String> keys = data.getInfoKeys();
+			 if (keys == null) {
+				 v.addComponent(new Label("Got no key/value info for this well"));
+			 }
+			 else {
+				 for (String key: keys) {
+					 v.addComponent(new Label(key+"="+data.getInfo(key)));
+				 }
+			 }
+		 }
 	}
 	public String getHelpMessage() {
 		 String msg = "<ul>";

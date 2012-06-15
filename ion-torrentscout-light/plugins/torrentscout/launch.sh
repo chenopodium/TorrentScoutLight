@@ -1,6 +1,6 @@
 # Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved
 # $Revision: 16728 $
-VERSION="0.2.2"
+VERSION="2.3.0"
 
 # BAM and SFF File Name
 RUN_NAME=${TSP_RUN_NAME}

@@ -50,10 +50,14 @@ import com.vaadin.terminal.ThemeResource;
 import com.vaadin.ui.AbstractOrderedLayout;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.Button.ClickEvent;
+import com.vaadin.ui.CheckBox;
+import com.vaadin.ui.GridLayout;
 import com.vaadin.ui.HorizontalLayout;
 import com.vaadin.ui.Label;
+import com.vaadin.ui.NativeButton;
 import com.vaadin.ui.Select;
 import com.vaadin.ui.TextField;
+import com.vaadin.ui.VerticalLayout;
 import com.vaadin.ui.Window;
 
 /**
@@ -101,6 +105,8 @@ public class ProcessWindowCanvas extends WindowOpener implements Property.ValueC
 
 	int bucket = 3;
 	int pixperwell = 4;
+	boolean doNN = true;
+	boolean useBg = false;
 	boolean coordChanged;
 
 	public ProcessWindowCanvas(TSVaadin app, Window main, String description, int x, int y) {
@@ -120,12 +126,12 @@ public class ProcessWindowCanvas extends WindowOpener implements Property.ValueC
 	@Override
 	public void openButtonClick(Button.ClickEvent event) {
 		if (app.getExperimentContext() == null) {
-			mainwindow.showNotification("No Experiment Selected", "<br/>Please open an experiment first", Window.Notification.TYPE_WARNING_MESSAGE);
+			appwindow.showNotification("No Experiment Selected", "<br/>Please open an experiment first", Window.Notification.TYPE_WARNING_MESSAGE);
 			return;
 		}
 		this.exp = app.getExperimentContext();
 		if (app.getExperimentContext().getWellContext() == null) {
-			mainwindow.showNotification("No Location Selected", "<br/>Please pick an area", Window.Notification.TYPE_WARNING_MESSAGE);
+			appwindow.showNotification("No Location Selected", "<br/>Please pick an area", Window.Notification.TYPE_WARNING_MESSAGE);
 			return;
 		}
 		exp = app.getExperimentContext();
@@ -238,26 +244,30 @@ public class ProcessWindowCanvas extends WindowOpener implements Property.ValueC
 		this.addTypeSelection(h);
 		addCoordAndFlowSelection(h);
 
+		VerticalLayout vzoom = new VerticalLayout();
+		
 		zoom = new ZoomControl(bucket, new Button.ClickListener() {
 			@Override
 			public void buttonClick(com.vaadin.ui.Button.ClickEvent event) {
 
-				String question = "<html>This will reload the masks and data. <br>Do you still want to change the zoom level?";
-				OkDialog okdialog = new OkDialog(mainwindow, "Reload masks and data", question, new OkDialog.Recipient() {
-					@Override
-					public void gotInput(String name) {
-						if (!name.equalsIgnoreCase("OK")) return;
+//				String question = "<html>This will reload data. <br>Do you still want to change the zoom level?";
+//				OkDialog okdialog = new OkDialog(mywindow, "Reload masks and data", question, new OkDialog.Recipient() {
+//					@Override
+//					public void gotInput(String name) {
+//						if (!name.equalsIgnoreCase("OK")) return;
 						bucket = zoom.getBucket();
 
-						if (bucket == 2) pixperwell = 8;
-						else if (bucket == 1) pixperwell = 16;
+						if (bucket == 1) pixperwell = 16;
+						else if (bucket == 2) pixperwell = 8;
+						else if (bucket == 3) pixperwell = 4;
 						else if (bucket == 4) pixperwell = 2;
+						else if (bucket == 5) pixperwell = 1;
 						else
 							pixperwell = 4;
 
 						int raster_size = 400 / pixperwell;// default 100. At
 															// least 25, at most
-															// 200
+															// 400
 						maincont.setRasterSize(raster_size);
 						// need to reload data unfortunatley... but we could of
 						// course compute it
@@ -267,43 +277,58 @@ public class ProcessWindowCanvas extends WindowOpener implements Property.ValueC
 						reopen();
 						app.reopenMaskedit(false);
 						app.reopenFit();
-
-					}
-				});
+				//
+				// }
+				// });
 
 			}
 		});
-		zoom.setMax(4);
-		zoom.addGuiElements(h);
-
-		Button help = new Button();
+		zoom.setMax(5);
+		
+		hor = new HorizontalLayout();
+		hor.addComponent(vzoom);
+		
+		final NativeButton help = new NativeButton();
+		help.setStyleName("nopadding");
 		help.setDescription("Click me to get information on this window");
 		help.setIcon(new ThemeResource("img/help-hint.png"));
-		h.addComponent(help);
 		help.addListener(new Button.ClickListener() {
 			public void buttonClick(Button.ClickEvent event) {
 				 app.showHelpMessage("Help", getHelpMessage());
 			}
 		});
 
-		final Button export = new Button();
+		final NativeButton export = new NativeButton();
+		export.setStyleName("nopadding");
 		export.setIcon(new ThemeResource("img/export.png"));
 		export.setDescription("Export data for multiple flows or this image");
 		export.addListener(new Button.ClickListener() {
 			@Override
 			public void buttonClick(ClickEvent event) {
-				ExportTool export = new ExportTool(app, mainwindow, showmask, h);
+				ExportTool export = new ExportTool(app, mywindow, showmask, h);
 				export.doExportAction();
 			}
 
 		});
-		h.addComponent(export);
-		//h.addComponent(new Label(app.getExperimentContext().getRawDir()));
+		
+		final NativeButton options = new NativeButton();
+		options.setStyleName("nopadding");
+		options.setIcon(new ThemeResource("img/configure-3.png"));
+		options.setDescription("Options (such as on BG subtraction)");
+		options.addListener(new Button.ClickListener() {
+			@Override
+			public void buttonClick(ClickEvent event) {
+				doOptionAction();
+			}
 
-		hor = new HorizontalLayout();
+		});
+		vzoom.addComponent(export);
+		zoom.addGuiElements(vzoom);
+		vzoom.addComponent(options);
+		vzoom.addComponent(help);
+		
 		mywindow.addComponent(hor);
 		addCanvasSub(hor);
-
 		addCanvasCurve(hor);
 
 		// app.showMessage(this,
@@ -316,6 +341,50 @@ public class ProcessWindowCanvas extends WindowOpener implements Property.ValueC
 		
 	}
 
+	public void doOptionAction() {
+		GridLayout h = new GridLayout(3, 8);
+		String w = "80px";
+		
+		final TextField tspan = new TextField();
+		tspan.setWidth(w);
+		tspan.setDescription("The number of wells used in the neighborhood to compute the mean empty trace (if no bkg files are present");
+		tspan.setValue(maincont.getSpan());
+		tspan.setImmediate(true);
+		int y = 0;
+		Label lbl = new Label("NN span width:");
+		lbl.setWidth("80px");
+		h.addComponent(lbl, 0, y);
+		h.addComponent(tspan, 1, y++);
+		
+		
+		final CheckBox nn = new CheckBox("Compute NN (if false: shows raw trace)");
+		nn.setImmediate(true);
+		nn.setValue(doNN);
+		
+		h.addComponent(nn, 0, y++);
+		
+		
+		final CheckBox bg = new CheckBox("Use regional empty traces for bg subtraction if avialable");
+		bg.setImmediate(true);
+		bg.setValue(useBg);
+		
+		h.addComponent(bg, 0, y++);
+		
+		///
+		OkDialog okdialog = new OkDialog(mywindow, "Options", h, new OkDialog.Recipient() {
+			@Override
+			public void gotInput(String name) {
+				if (!name.equalsIgnoreCase("OK")) return;
+				int span = parseInt(tspan);
+				if (span > 0) {
+					maincont.setSpan(span);
+				}
+				doNN = nn.booleanValue();
+				useBg = bg.booleanValue();
+				reopen();
+			}
+		});
+	}
 	
 	public ArrayList<Integer> parseFlows(String sflows) {
 		ArrayList<Integer> flows = new ArrayList<Integer>();
@@ -394,11 +463,18 @@ public class ProcessWindowCanvas extends WindowOpener implements Property.ValueC
 			return null;
 		}
 		RasterData nndata = null;
+		if (!doNN) {
+			p("Not doing NN, returning raw data");
+			nndata = maincont.getData();
+			app.showMessage("Raw data", "Showing raw data (see options)");
+			return nndata;
+		}
 		try {
 
 			int span = Math.max(8, maincont.getSpan());
 			p("got span: " + span);
-			NearestNeighbor nn = new NearestNeighbor(span, maincont.getMedianFunction());
+			maincont.getExp().setFlow(maincont.getFlow());
+			NearestNeighbor nn = new NearestNeighbor(maincont.getExp() ,span, maincont.getMedianFunction());
 			BitMask ignore = maincont.getIgnoreMask();
 			BitMask take = maincont.getBgMask();
 
@@ -409,7 +485,7 @@ public class ProcessWindowCanvas extends WindowOpener implements Property.ValueC
 
 			// p("Masked neighbor subtraction: ignore mask " + ignore +
 			// " and empty mask " + take);
-			nndata = nn.computeBetter(maincont.getData(), ignore, take, null, span);
+			nndata = nn.computeBetter(maincont.getData(), ignore, take, null, span, useBg);
 
 		} catch (Exception e) {
 			app.showError(this, "Error with nn: " + ErrorHandler.getString(e));
@@ -449,7 +525,7 @@ public class ProcessWindowCanvas extends WindowOpener implements Property.ValueC
 		curveimage = new CurveImage(maincont);
 
 		curveimage.getImage();
-		String key = exp.getFileKey() + "_c_" + flow + "_" + type + "_" + coord.getX() + "_" + coord.getY() + "_";
+		String key = exp.getFileKey() + "_c_" + flow + "_" + type + "_" + coord.getX() + "_" + coord.getY() + "_"+this.doNN+"_"+this.useBg;
 		// key must also contain widget coords - just use some simple hash
 		int sum = 0;
 		if (maincont.getWidgets() != null) {
@@ -461,12 +537,7 @@ public class ProcessWindowCanvas extends WindowOpener implements Property.ValueC
 		StreamResource imageresource = new StreamResource((StreamResource.StreamSource) curveimage, key + ".png", app);
 		imageresource.setCacheTime(0);
 		exportimage = imageresource;
-		String relative = imageresource.getApplication().getRelativeLocation(imageresource);
-		String appurl = imageresource.getApplication().getURL().toString();
-		String url = relative;
-		url = appurl + url.replace("app://", "");
-		// p("URl from stream resource curve: " + url);
-
+		
 		canvascurve = new Canvas();
 		canvascurve.setWidth("800px");
 		canvascurve.setHeight("500px");
@@ -501,7 +572,7 @@ public class ProcessWindowCanvas extends WindowOpener implements Property.ValueC
 		fwend.setDescription("end");
 		canvascurve.drawUIElement(fwend);
 
-		String bg = url;
+		String bg =  app.getBgUrl(imageresource.getApplication().getRelativeLocation(imageresource));
 		canvascurve.setBackgroundImage(bg);
 		v.addComponent(canvascurve);
 
@@ -566,13 +637,7 @@ public class ProcessWindowCanvas extends WindowOpener implements Property.ValueC
 		String key = exp.getFileKey() + "_raster" + flow + "_" + frame + "_" + type + "_" + coord.getX() + "_" + coord.getY() + "_" + pixperwell + "_" + name;
 		StreamResource imageresource = new StreamResource((StreamResource.StreamSource) subimage, key + Math.random() * 1000 + ".png", app);
 		imageresource.setCacheTime(10000);
-		String relative = imageresource.getApplication().getRelativeLocation(imageresource);
-		String appurl = imageresource.getApplication().getURL().toString();
-		String url = relative;
-		url = appurl + url.replace("app://", "");
-		// p("URl from stream resource sub: " + url);
-		// app.getMainWindow().open(imageresource, "_blank");
-
+		
 		canvassub = new Canvas();
 		// canvassub.setImmediate(true);
 		canvassub.setBackgroundColor("black");
@@ -648,7 +713,7 @@ public class ProcessWindowCanvas extends WindowOpener implements Property.ValueC
 
 		// p("Reopening FIT ");
 		app.reopenFit();
-		String bg = url;
+		String bg =  app.getBgUrl(imageresource.getApplication().getRelativeLocation(imageresource));
 		canvassub.setBackgroundImage(bg);
 		v.addComponent(canvassub);
 
@@ -671,7 +736,7 @@ public class ProcessWindowCanvas extends WindowOpener implements Property.ValueC
 							
 							if (w.isMainWidget()) {								
 								String question = "<html>This will reload the masks and data. <br>Do you still want to change the main coordinate?";
-								OkDialog okdialog = new OkDialog(mainwindow, "Reload masks and data", question, new OkDialog.Recipient() {
+								OkDialog okdialog = new OkDialog(mywindow, "Reload masks and data", question, new OkDialog.Recipient() {
 									@Override
 									public void gotInput(String name) {
 										if (!name.equalsIgnoreCase("OK")) return;
@@ -737,7 +802,7 @@ public class ProcessWindowCanvas extends WindowOpener implements Property.ValueC
 						y = 0;
 					}
 				}
-				if (mask.get(x, y)) {
+				if (mask.getSub(x, y)) {
 					c = new WellCoordinate(x + offx + data.getRelStartcoord().getCol(), y + offy + data.getRelStartcoord().getRow());
 					p("Moving widget to " + c);
 					return c;
@@ -876,13 +941,17 @@ public class ProcessWindowCanvas extends WindowOpener implements Property.ValueC
 		}
 		String s = "" + tflow.getValue();
 		if (s != null) {
-			flow = Integer.parseInt(s);
-			p("parsed flow: " + flow);
+			try {
+				flow = Integer.parseInt(s);
+				p("parsed flow: " + flow);
+			}
+			catch (Exception e){}
 		}
 
 		return flow;
 	}
 
+	
 	public int parseFrame() {
 		if (tframe == null) {
 			return frame;

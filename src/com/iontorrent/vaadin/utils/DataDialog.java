@@ -9,10 +9,14 @@ public class DataDialog extends Window {
     /**
 	 * 
 	 */
+	
+	Window parent;
 	private static final long serialVersionUID = 1L;
 	TextArea area; 
 
-    public DataDialog(final Window parent, String title, String data) {
+    public DataDialog(final Window par, String title, String data) {
+    	if (par.getParent() != null) parent = par.getParent();
+        else parent = par;
         area = new TextArea();
         area.setWidth("560px");
         area.setHeight("450px");

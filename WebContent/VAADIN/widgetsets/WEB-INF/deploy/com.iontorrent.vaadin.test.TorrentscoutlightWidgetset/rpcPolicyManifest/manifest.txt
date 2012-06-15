@@ -1,0 +1,2 @@
+# Module com.iontorrent.vaadin.test.TorrentscoutlightWidgetset
+# RPC service class, partial path of RPC policy file

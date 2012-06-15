@@ -31,14 +31,17 @@ import com.vaadin.terminal.ThemeResource;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.HorizontalLayout;
 import com.vaadin.ui.Label;
+import com.vaadin.ui.NativeButton;
 import com.vaadin.ui.Select;
+import com.vaadin.ui.VerticalLayout;
 import com.vaadin.ui.Window;
 
 /**
  * 
  * @author Chantal Roth chantal.roth@lifetech.com
  */
-public class BfMaskWindowCanvas extends WindowOpener implements Button.ClickListener, Property.ValueChangeListener {
+public class BfMaskWindowCanvas extends WindowOpener implements
+		Button.ClickListener, Property.ValueChangeListener {
 
 	private TSVaadin app;
 	CoordSelect coordsel;
@@ -57,7 +60,8 @@ public class BfMaskWindowCanvas extends WindowOpener implements Button.ClickList
 	int bucket;
 	BfMaskImage bfmask;
 
-	public BfMaskWindowCanvas(TSVaadin app, Window main, String description, int x, int y) {
+	public BfMaskWindowCanvas(TSVaadin app, Window main, String description,
+			int x, int y) {
 		super("BF Heat Map", main, description, x, y, 800, 600);
 		this.app = app;
 		bucket = 5;
@@ -65,17 +69,20 @@ public class BfMaskWindowCanvas extends WindowOpener implements Button.ClickList
 
 	@Override
 	public void openButtonClick(Button.ClickEvent event) {
-		if (app.getExperimentContext() == null) {
-			mainwindow.showNotification("No Experiment Selected", "<br/>Please open an experiment first", Window.Notification.TYPE_WARNING_MESSAGE);
+		if (!super.checkExperimentOpened())
 			return;
-		}
-		if (app.getExperimentContext().getWellContext().getMask() == null) {
-			mainwindow.showNotification("Found no bfmask.bin", "<br/>Could not find " + app.getExperimentContext().getResultsDirectory() + "bfmask.bin", Window.Notification.TYPE_WARNING_MESSAGE);
+		if (!app.getExperimentContext().hasBfMask()) {
+			appwindow.showNotification("Found no bfmask.bin",
+					"<br/>Could not find "
+							+ app.getExperimentContext().getBfMaskFile(),
+					Window.Notification.TYPE_WARNING_MESSAGE);
 			return;
 		}
 		exp = app.getExperimentContext();
 		if (exp.doesExplogHaveBlocks()) {
-			mainwindow.showNotification("Proton", "<br/>Pick a block first in this Proton experiment", Window.Notification.TYPE_HUMANIZED_MESSAGE);
+			appwindow.showNotification("Proton",
+					"<br/>Pick a block first in this Proton experiment",
+					Window.Notification.TYPE_HUMANIZED_MESSAGE);
 			return;
 		}
 
@@ -85,12 +92,17 @@ public class BfMaskWindowCanvas extends WindowOpener implements Button.ClickList
 	@Override
 	public void windowOpened(final Window mywindow) {
 
-		if (flag == null) flag = BfMaskFlag.LIVE;
+		if (flag == null)
+			flag = BfMaskFlag.LIVE;
 		exp = app.getExperimentContext();
 
 		if (oldexp == null || exp != oldexp) {
-			if (exp.is318()) bucket = 15;
-			else if (exp.is316()) bucket = 10;
+			if (exp.is318())
+				bucket = 15;
+			else if (exp.is316())
+				bucket = 10;
+			else if (exp.isThumbnails() || exp.getNrrows()<1000)
+				bucket = 4;
 		}
 		oldexp = exp;
 		WellCoordinate coord = exp.getWellContext().getCoordinate();
@@ -107,34 +119,32 @@ public class BfMaskWindowCanvas extends WindowOpener implements Button.ClickList
 		HorizontalLayout h = new HorizontalLayout();
 		mywindow.addComponent(h);
 
-		if (bfmask == null ) bfmask = new BfMaskImage(exp, flag, bucket);
+		if (bfmask == null)
+			bfmask = new BfMaskImage(exp, flag, bucket);
 
-		p("Getting streamresource for "+exp.getResultsDirectory()+", key="+exp.getFileKey());
-		imageresource = new StreamResource((StreamResource.StreamSource) bfmask, exp.getFileKey() + flag.getName() + (Math.random()*100)+"_bf.png", app);
+		imageresource = new StreamResource(
+				(StreamResource.StreamSource) bfmask, exp.getFileKey()
+						+ flag.getName() + (Math.random() * 100) + "_bf.png",
+				app);
 		imageresource.setCacheTime(1000);
-		mywindow.setHeight(bfmask.getImage().getHeight() + 100 + "px");
-		mywindow.setWidth(bfmask.getImage().getWidth() + 100 + "px");
+		int width = Math.max(bfmask.getImage().getHeight() + 100, 600);
+		int height = Math.max(bfmask.getImage().getHeight() + 100, 200);
+		mywindow.setHeight(height + "px");
+		mywindow.setWidth(width + "px");
 		// imageresource.
-
-		String relative = imageresource.getApplication().getRelativeLocation(imageresource);
-
-		String appurl = imageresource.getApplication().getURL().toString();
-		String url = relative;
-		url = appurl + url.replace("app://", "");
-
-		relative = relative.substring(12);
 
 		// if (canvas == null) {
 		canvas = new Canvas();
 		canvas.setBackgroundColor("black");
-		canvas.setHeight((bfmask.getImage().getHeight()+200)+"px");
+		canvas.setHeight((bfmask.getImage().getHeight() + 200) + "px");
 		java.awt.Point point = bfmask.getPointFromWell(coord);
-		Cross cross = new Cross((int) point.getX(), (int) point.getY(), 3, 5);
-		cross.setDescription("");
-		canvas.drawUIElement(cross);
+//		Cross cross = new Cross((int) point.getX(), (int) point.getY(), 3, 5);
+//		cross.setDescription("");
+//		canvas.drawUIElement(cross);
 
-		String bg = url;
-		// p("Using bg: " + bg);
+		String bg = app.getBgUrl(imageresource.getApplication()
+				.getRelativeLocation(imageresource));
+		p("Using bg: " + bg);
 		canvas.setBackgroundImage(bg);
 
 		sel = new Select();
@@ -160,30 +170,23 @@ public class BfMaskWindowCanvas extends WindowOpener implements Button.ClickList
 		sel.setImmediate(true);
 		sel.addListener(this);
 
-		zoom = new ZoomControl(bucket, new Button.ClickListener() {
-			@Override
-			public void buttonClick(com.vaadin.ui.Button.ClickEvent event) {
-				bucket = zoom.getBucket();
-				bfmask = null;
-				reopen();
-			}
-		});
-		zoom.addGuiElements(h);
-
-		coordsel = new CoordSelect(x + exp.getColOffset(), y + exp.getRowOffset(), this);
+		coordsel = new CoordSelect(x + exp.getColOffset(), y
+				+ exp.getRowOffset(), this);
 		coordsel.addGuiElements(h);
 
-		Button help = new Button();
+		NativeButton help = new NativeButton();
+		help.setStyleName("nopadding");
 		help.setDescription("Click me to get information on this window");
 		help.setIcon(new ThemeResource("img/help-hint.png"));
-		h.addComponent(help);
+
 		help.addListener(new Button.ClickListener() {
 			public void buttonClick(Button.ClickEvent event) {
 				app.showHelpMessage("Help", getHelpMessage());
 			}
 		});
 
-		final Button export = new Button();
+		final NativeButton export = new NativeButton();
+		export.setStyleName("nopadding");
 		export.setIcon(new ThemeResource("img/export.png"));
 		export.setDescription("Open image in another browser window so that you can save it to file");
 		export.addListener(new Button.ClickListener() {
@@ -192,33 +195,49 @@ public class BfMaskWindowCanvas extends WindowOpener implements Button.ClickList
 				app.getMainWindow().open(imageresource, "_blank");
 			}
 		});
-		h.addComponent(export);
-		h.addComponent(new Label(exp.getBfMaskFile()));
 
 		HorizontalLayout hcan = new HorizontalLayout();
 
-		final GradientPanel grad = bfmask.getGradient();
-		GradientLegend leg = new GradientLegend(grad, new GradientLegend.Recipient() {
+		VerticalLayout vzoom = new VerticalLayout();
 
+		zoom = new ZoomControl(bucket, new Button.ClickListener() {
 			@Override
-			public void minOrMaxChanged() {
-				p("Min or max changed");
-				gradmin = (int) grad.getMin();
-				gradmax = (int) grad.getMax();
-				bfmask.setMin(gradmin);
-				bfmask.setMax(gradmax);
-				bfmask.repaint();
-				// app.showMessage("Gradient",
-				// "This is not fully working yet :-)");
+			public void buttonClick(com.vaadin.ui.Button.ClickEvent event) {
+				bucket = zoom.getBucket();
+				bfmask = null;
 				reopen();
-
 			}
-		}, app, bfmask.getImage().getHeight(), (int)canvas.getHeight());
+		});
+		vzoom.addComponent(export);
+		zoom.addGuiElements(vzoom);
+		vzoom.addComponent(help);
+
+		hcan.addComponent(vzoom);
+		final GradientPanel grad = bfmask.getGradient();
+		GradientLegend leg = new GradientLegend(grad,
+				new GradientLegend.Recipient() {
+
+					@Override
+					public void minOrMaxChanged() {
+						p("Min or max changed");
+						gradmin = (int) grad.getMin();
+						gradmax = (int) grad.getMax();
+						bfmask.setMin(gradmin);
+						bfmask.setMax(gradmax);
+						bfmask.repaint();
+						// app.showMessage("Gradient",
+						// "This is not fully working yet :-)");
+						reopen();
+
+					}
+				}, app, bfmask.getImage().getHeight(), (int) canvas.getHeight());
 		leg.addGuiElements(hcan);
 		hcan.addComponent(canvas);
-		
+
 		mywindow.addComponent(hcan);
-		app.showTopMessage(this.getName(), "Drag the cursor and <b>double click</b> to select a different well/area");
+
+		app.showTopMessage(this.getName(),
+				"Drag the cursor and <b>double click</b> to select a different well/area");
 
 		canvas.addListener(new Canvas.CanvasMouseUpListener() {
 
@@ -226,7 +245,8 @@ public class BfMaskWindowCanvas extends WindowOpener implements Button.ClickList
 			public void mouseUp(Point p, UIElement child) {
 				mousecount++;
 				if (mousecount > 3) {
-					app.showMessage("Double click", "Double click on <b>cross</b> to select well");
+					app.showMessage("Double click",
+							"Double click on anywhere to select well");
 					mousecount = 0;
 				}
 			}
@@ -236,23 +256,33 @@ public class BfMaskWindowCanvas extends WindowOpener implements Button.ClickList
 
 			@Override
 			public void mouseDown(Point p, int count, UIElement child) {
+				int newx = (int) p.getX();
+				int newy = (int) p.getY();
 				if (count > 1) {
-					int newx = (int) p.getX();
-					int newy = (int) p.getY();
-					p("Got mouse DOUBLE CLICK on canvas: " + p + ", child=" + child);
-					if (child != null && child instanceof Polygon) {
-						x = newx;
-						y = newy;
-						Polygon po = (Polygon) child;
-						// p("Location of child po: "+po.getCenter());
+					p("Got double CLICK on canvas: " + p + ", child=" + child);
 
-						WellCoordinate coord = bfmask.getWellCoordinate(x, y);
-						// p("Got coord: " + coord + ", setting description");
-						coordsel.setX(coord.getX() + exp.getColOffset());
-						coordsel.setY(coord.getY() + exp.getRowOffset());
-						// po.setDescription("changed description :"+coord);
-						buttonClick(null);
-					}
+					x = newx;
+					y = newy;
+					Polygon po = (Polygon) child;
+					// p("Location of child po: "+po.getCenter());
+
+					WellCoordinate coord = bfmask.getWellCoordinate(x, y);
+					// p("Got coord: " + coord + ", setting description");
+					coordsel.setX(coord.getX() + exp.getColOffset());
+					coordsel.setY(coord.getY() + exp.getRowOffset());
+					// po.setDescription("changed description :"+coord);
+					buttonClick(null);
+
+				} else if (count == 1) {
+					x = newx;
+					y = newy;
+					WellCoordinate coord = bfmask.getWellCoordinate(x, y);
+					// p("Got coord: " + coord + ", setting description");
+					coordsel.setX(coord.getX() + exp.getColOffset());
+					coordsel.setY(coord.getY() + exp.getRowOffset());
+					// po.setDescription("changed description :"+coord);
+					buttonClick(null);
+
 				}
 
 			}
@@ -281,9 +311,11 @@ public class BfMaskWindowCanvas extends WindowOpener implements Button.ClickList
 			this.reopen();
 		}
 	}
+
 	public void clear() {
 		bfmask = null;
 	}
+
 	public void buttonClick(Button.ClickEvent event) {
 		x = coordsel.getX();
 		y = coordsel.getY();
@@ -301,26 +333,36 @@ public class BfMaskWindowCanvas extends WindowOpener implements Button.ClickList
 				exp = comp.getContext(b, false);
 				app.setExperimentContext(exp);
 			} else {
-				app.showMessage("Block", "Could not find a block for " + x + "/" + y + "<br>You can also use the Proton View to pick a block");
+				app.showMessage(
+						"Block",
+						"Could not find a block for "
+								+ x
+								+ "/"
+								+ y
+								+ "<br>You can also use the Proton View to pick a block");
 			}
 		}
 		app.reopenRaw();
 	}
 
 	private static void err(String msg, Exception ex) {
-		Logger.getLogger(BfMaskWindowCanvas.class.getName()).log(Level.SEVERE, msg, ex);
+		Logger.getLogger(BfMaskWindowCanvas.class.getName()).log(Level.SEVERE,
+				msg, ex);
 	}
 
 	private static void err(String msg) {
-		Logger.getLogger(BfMaskWindowCanvas.class.getName()).log(Level.SEVERE, msg);
+		Logger.getLogger(BfMaskWindowCanvas.class.getName()).log(Level.SEVERE,
+				msg);
 	}
 
 	private static void warn(String msg) {
-		Logger.getLogger(BfMaskWindowCanvas.class.getName()).log(Level.WARNING, msg);
+		Logger.getLogger(BfMaskWindowCanvas.class.getName()).log(Level.WARNING,
+				msg);
 	}
 
 	private static void p(String msg) {
-		//system.out.println("BfMaskWindowCanvas: " + msg);
-		Logger.getLogger(BfMaskWindowCanvas.class.getName()).log(Level.INFO, msg);
+		// system.out.println("BfMaskWindowCanvas: " + msg);
+		Logger.getLogger(BfMaskWindowCanvas.class.getName()).log(Level.INFO,
+				msg);
 	}
 }

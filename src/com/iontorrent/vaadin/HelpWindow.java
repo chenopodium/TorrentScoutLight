@@ -94,9 +94,14 @@ public class HelpWindow extends WindowOpener {
 		panel.getLayout().setMargin(false);
 		
 		String url = app.getURL().toString();
-		p("App url: "+url);
-		if (url.endsWith("8080/")) url = url+"TSL/";
-		p("App url is now: "+url);
+		p("help url: "+url);
+	//	: App url: http://127.0.0.1:8080/TSL/
+		if (!app.getServer().equalsIgnoreCase("localhost") && url.indexOf("127.0.0.1") > -1) {
+			url = url.replace("127.0.0.1:8080", app.getServer());
+			url = url.replace("127.0.0.1", app.getServer());
+		}
+		if (!url.endsWith("TSL/")) url = url+"TSL/";
+		p("help url is now: "+url);
 		Link link = new Link("PDF document", new ExternalResource(url+"VAADIN/help.pdf"));
 		link.setTargetName("_blank");
         v.addComponent(link);

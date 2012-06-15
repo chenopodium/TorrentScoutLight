@@ -12,9 +12,12 @@ public class FlowRangeDialog extends Window {
     Recipient r; 
     TextField tmin;
     TextField tmax ;
+    Window parent;
 
-    public FlowRangeDialog(final Window parent, String title, String question, int min, int max, Recipient recipient) {
+    public FlowRangeDialog(final Window par, String title, String question, int min, int max, Recipient recipient) {
         r = recipient;
+        if (par.getParent() != null) parent = par.getParent();
+        else parent = par;
         tmin = new TextField();
         tmax = new TextField();
         setCaption(title);
@@ -32,6 +35,7 @@ public class FlowRangeDialog extends Window {
         h.addComponent(tmax);
         addComponent(h);
         final Window dialog = this;
+        dialog.focus();
         dialog.setWidth("400px");
         addComponent(new Button("Ok", new Button.ClickListener() {
             public void buttonClick(ClickEvent event) {

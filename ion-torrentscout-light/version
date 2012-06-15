@@ -1,4 +1,4 @@
 # Copyright (C) 2012 Ion Torrent Systems, Inc. All Rights Reserved
 MAJOR=2
-MINOR=2
-RELEASE=5
+MINOR=3
+RELEASE=2

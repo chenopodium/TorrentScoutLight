@@ -76,7 +76,8 @@ public class RawImage implements StreamResource.StreamSource {
         WellContextFilter filter = new WellContextFilter(exp.getWellContext(), haveflags, null, type, flow, coord);
         WellFlowData data = manager.getFlowData(filter, false);
         
-         NearestNeighbor alg = new NearestNeighbor(filter, 5,false);
+        exp.setFlow(flow);
+         NearestNeighbor alg = new NearestNeighbor(this.exp, filter, 5,false);
         ArrayList<WellFlowDataResult> res = alg.compute();
         WellFlowDataResult nn = res.get(0);
        

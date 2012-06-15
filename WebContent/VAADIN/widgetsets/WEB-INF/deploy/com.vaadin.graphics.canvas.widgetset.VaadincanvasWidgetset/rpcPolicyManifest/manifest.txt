@@ -1,0 +1,2 @@
+# Module com.vaadin.graphics.canvas.widgetset.VaadincanvasWidgetset
+# RPC service class, partial path of RPC policy file

@@ -8,6 +8,7 @@ package com.iontorrent.vaadin;
 import java.io.File;
 import java.io.FilePermission;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.security.AccessController;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -20,17 +21,19 @@ import java.util.logging.Logger;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-//import com.github.wolfie.sessionguard.SessionGuard;
 import com.iontorrent.expmodel.CompositeExperiment;
 import com.iontorrent.expmodel.DatBlock;
 import com.iontorrent.expmodel.ExperimentContext;
 import com.iontorrent.results.scores.ScoreMask;
+import com.iontorrent.torentscout.explorer.cube.DataCubeLoader;
 import com.iontorrent.torrentscout.explorer.ExplorerContext;
 import com.iontorrent.utils.SystemTool;
 import com.iontorrent.utils.io.FileTools;
 import com.iontorrent.vaadin.align.AlignWindow;
 import com.iontorrent.vaadin.automate.AutomateWindow;
-import com.iontorrent.vaadin.bfmask.BfMaskWindowCanvas;
+import com.iontorrent.vaadin.bgmodel.ETWindowCanvas;
+import com.iontorrent.vaadin.bgmodel.RegionChartWindow;
+import com.iontorrent.vaadin.bgmodel.RegionPropertyChartWindow;
 import com.iontorrent.vaadin.composite.CompWindow;
 import com.iontorrent.vaadin.db.DbWindow;
 import com.iontorrent.vaadin.fit.FitWindowCanvas;
@@ -44,11 +47,13 @@ import com.iontorrent.vaadin.table.TableWindow;
 import com.iontorrent.vaadin.utils.PerformanceMonitor;
 import com.iontorrent.vaadin.utils.WindowOpener;
 import com.iontorrent.vaadin.wholechip.WholeChipWindowCanvas;
+import com.iontorrent.vaadin.xy.XYWindow;
 import com.iontorrent.wellmodel.WellCoordinate;
 import com.iontorrent.wellmodel.WellSelection;
 import com.vaadin.Application;
 import com.vaadin.terminal.ParameterHandler;
 import com.vaadin.terminal.gwt.server.HttpServletRequestListener;
+import com.vaadin.terminal.gwt.server.WebApplicationContext;
 import com.vaadin.ui.HorizontalLayout;
 import com.vaadin.ui.Label;
 import com.vaadin.ui.MenuBar;
@@ -57,26 +62,24 @@ import com.vaadin.ui.MenuBar.MenuItem;
 import com.vaadin.ui.VerticalLayout;
 import com.vaadin.ui.Window;
 import com.vaadin.ui.Window.Notification;
-import com.vaadin.terminal.gwt.server.WebApplicationContext;
 
 /**
  * 
  * @author Chantal Roth
  * @version
  */
+@SuppressWarnings({ "serial", "deprecation" })
 public class TSVaadin extends Application implements
 		HttpServletRequestListener, ParameterHandler {
 
-	public static String VERSION = "2.2.5";
+	public static String VERSION = "2.3.1";
 
 	static {
 		Logger.global.setLevel(Level.WARNING);
 	}
-	
-	
-	private static final int WARNING_PERIOD_MINS = 2;
-	
+
 	private ExperimentContext exp;
+	private DataCubeLoader loader;
 	private ExplorerContext maincont;
 	private ScoreMask scoremask;
 	private CompositeExperiment comp;
@@ -85,11 +88,14 @@ public class TSVaadin extends Application implements
 	private WindowOpener dbWindow;
 	private WindowOpener ionoWindow;
 	private RawWindow rawWindow;
+	private WindowOpener regionalWindow;
+	private WindowOpener regionalPropWindow;
 	private WindowOpener tableWindow;
 	private WindowOpener automateWindow;
 	private WindowOpener processWindow;
 	private WindowOpener fitWindow;
-	private WindowOpener maskWindow;
+	//private WindowOpener maskWindow;
+	private WindowOpener etWindow;
 	private WindowOpener scoreWindow;
 	private WindowOpener geneWindow;
 	private WindowOpener chipWindow;
@@ -98,21 +104,29 @@ public class TSVaadin extends Application implements
 	private WindowOpener compWindow;
 	private WindowOpener maskeditWindow;
 	private WindowOpener testWindow;
+	private WindowOpener xyWindow;
 	// private MovieWindow movieWindow;
 	private Window main;
 	private String server;
 	private HashMap<String, String> parameters;
-	private String url;
-
+	private String dburl;
+	private Label labelexperiment;
 	private String remote;
 	private ArrayList<WindowOpener> windows;
 	private PerformanceMonitor perf;
 	private File logfolder;
 	private VerticalLayout mainLayout;
-	 
+
+	private static final String PERFSTATS = "tsl_perfstats.csv";
+	private static final String MODSTATS = "tsl_modulestats.csv";
+	private static final String LOGDIRS[] = {
+			SystemTool.getInfo("CATALINA_HOME") + "/logs", "/var/log/tomcat6/",
+			"/var/log/tomcat7/", "/results/log/", "./", "~/",
+			"/var/log/tomcat6/" };
+
 	@Override
 	public void init() {
-		    
+
 		System.setProperty("java.util.prefs.PreferencesFactory",
 				"com.iontorrent.vaadin.utils.DisabledPreferencesFactory");
 		setTheme("torrentscout");
@@ -120,14 +134,15 @@ public class TSVaadin extends Application implements
 		main = new Window("Torrent Scout Light");
 		main.addParameterHandler(this);
 		main.setStyleName("black");
-	//	main.getContent().setHeight("100%");
-		
+		// main.getContent().setHeight("100%");
+
 		setMainWindow(main);
-		
+
 		// main.setSizeFull();
 
 		logfolder = getLogFolder();
 		p("logfolder: " + logfolder);
+		getIpInfo();
 
 		createWindows();
 		addMenu();
@@ -136,7 +151,7 @@ public class TSVaadin extends Application implements
 		// "<br/>Browse the database or pick folders yourself");
 		if (perf == null)
 			perf = new PerformanceMonitor();
-		logStats("tsl_perfstats.csv", perf.getCsvInfo(), perf.getCsvHeader());
+		logStats(PERFSTATS, perf.getCsvInfo(), perf.getCsvHeader());
 		int mb = (int) perf.getFreeMb();
 		if (mb < 500) {
 			this.showWarning(
@@ -149,20 +164,56 @@ public class TSVaadin extends Application implements
 
 	}
 
-//	public void setKeepAlive(boolean alive) {	
-//		sessionGuard.setKeepalive(alive);
-//	}
-//	public boolean isKeepAlive() {
-//		return sessionGuard.isKeptAlive();
-//	}
-	public void setTimeout(int minutes) {
-		((WebApplicationContext) getContext()).getHttpSession().setMaxInactiveInterval(minutes*60);
+	public String getBgUrl(String relative) {
+		String appurl = getURL().toString();
+		String bg = relative;
+		bg = appurl + relative.replace("app://", "");
+		// http://127.0.0.1:8080/TSL/APP/1/7848026798042749live49.917729478381844_bf.png
+		p("Bg before localhost check: " + bg);
+		p("server: " + getServer());
+		if (!getServer().equalsIgnoreCase("localhost")
+				&& bg.indexOf("127.0.0.1") > -1) {
+			bg = bg.replace("127.0.0.1:8080", server);
+			bg = bg.replace("127.0.0.1", server);
+		}
+		p("Using bg: " + bg);
+
+		return bg;
 	}
+
+	private void getIpInfo() {
+		p("=== get IpInfo ===");
+		p("App url: " + this.getURL().toExternalForm());
+		p("App host:" + super.getURL().getHost());
+		this.server = super.getURL().getHost();
+		try {
+			InetAddress thisIp = InetAddress.getLocalHost();
+			p("Hostname: " + InetAddress.getLocalHost().getCanonicalHostName());
+			server = InetAddress.getLocalHost().getCanonicalHostName();
+			p("IP:" + thisIp.getHostAddress());
+			p("Server is now=hostname: " + server);
+		} catch (Exception e) {
+			p("Could not get ip");
+		}
+	}
+
+	// public void setKeepAlive(boolean alive) {
+	// sessionGuard.setKeepalive(alive);
+	// }
+	// public boolean isKeepAlive() {
+	// return sessionGuard.isKeptAlive();
+	// }
+	public void setTimeout(int minutes) {
+		((WebApplicationContext) getContext()).getHttpSession()
+				.setMaxInactiveInterval(minutes * 60);
+	}
+
 	public int getTimeout() {
 		int sessionTimeout = ((WebApplicationContext) getContext())
-		        .getHttpSession().getMaxInactiveInterval() / 60;
+				.getHttpSession().getMaxInactiveInterval() / 60;
 		return sessionTimeout;
 	}
+
 	private void addMenu() {
 		MenuBar menu = new MenuBar();
 		mainLayout = new VerticalLayout();
@@ -171,12 +222,19 @@ public class TSVaadin extends Application implements
 		Label vl = new Label(" v" + VERSION);
 
 		vl.setStyleName("smallgray");
-		layout.addComponent(vl);
-		mainLayout.addComponent(layout);
-		main.addComponent(mainLayout);
-		//mainLayout.setExpandRatio(mainLayout, 0);
-
+		labelexperiment = new Label("");
 		
+		layout.addComponent(labelexperiment);
+		layout.addComponent(vl);
+		
+		mainLayout.addComponent(layout);
+		labelexperiment.setStyleName("smallgray");
+		//mainLayout.addComponent(labelexperiment);
+		// also add current experiment
+		
+		main.addComponent(mainLayout);
+		// mainLayout.setExpandRatio(mainLayout, 0);
+
 		MenuBar.Command mycommand = new MenuBar.Command() {
 			private static final long serialVersionUID = 1L;
 
@@ -197,7 +255,8 @@ public class TSVaadin extends Application implements
 		it = menu.addItem("Pick Region", null, null);
 		it.setDescription("Pick a well or a region with one of the viewers below");
 		add(it, this.compWindow);
-		add(it, this.maskWindow);
+	//	add(it, this.maskWindow);
+		add(it, this.etWindow);
 		add(it, this.chipWindow);
 		add(it, this.tableWindow);
 
@@ -205,7 +264,8 @@ public class TSVaadin extends Application implements
 
 		it = menu.addItem("Find Reads", null, null);
 		it.setDescription("Find perfect reads, search alignments or sequence patterns");
-		add(it, this.scoreWindow);
+		add(it, this.scoreWindow, "Find reads and create masks based on read properties");
+		
 		add(it, this.geneWindow);
 
 		it = menu.addItem("|", null);
@@ -213,22 +273,25 @@ public class TSVaadin extends Application implements
 		it = menu.addItem("View Results", null, null);
 		it.setDescription("View information about one well, such as the ionogram, the raw signal time series, the alignment and other data from the analysis pipeline (if available)");
 		add(it, this.ionoWindow);
-		add(it, this.alignWindow);
+		add(it, this.alignWindow);		
+		add(it, this.scoreWindow);
 		add(it, this.rawWindow);
+		add(it, this.xyWindow);
 		add(it, "Export data (ionograms, alignments, raw data)",
 				this.maskeditWindow);
 
 		it = menu.addItem("|", null);
 
-		it = menu.addItem("Raw Data", null, null);
-		it.setDescription("View/Export raw data, find the incorporation signals, compute background subtraction and create masks yourself");
+		it = menu.addItem("Regional views", null, null);
+		it.setDescription("Torrent Explorer type funcationality, view/export regional (raw) data, find the incorporation signals, view regional emptyt races, compute background subtraction and create masks yourself");
 
 		add(it, this.rawWindow);
 		add(it, this.processWindow);
 		add(it, this.fitWindow);
 		add(it, this.maskeditWindow);
 		add(it, this.automateWindow);
-
+		add(it, this.regionalWindow);
+		add(it, this.regionalPropWindow);
 		// it = menu.addItem("|",null);
 
 		// it = menu.addItem("Test", null, null);
@@ -294,6 +357,11 @@ public class TSVaadin extends Application implements
 		MenuItem child = it.addItem(win.getName(), null, win);
 		addDesc(child, win);
 	}
+	private void add(MenuItem it, WindowOpener win, String name) {
+		// it.addSeparator();
+		MenuItem child = it.addItem(name, null, win);
+		addDesc(child, win);
+	}
 
 	private void addDesc(MenuItem it, WindowOpener win) {
 		it.setDescription("<h2>" + win.getName() + "</h2>"
@@ -309,17 +377,23 @@ public class TSVaadin extends Application implements
 				"Browse the experiment db to select a run", x, y);
 		expWindow = new ExperimentWindow(this, main,
 				"Pick folders with raw and results data", x, y);
-		maskWindow = new BfMaskWindowCanvas(
+//		maskWindow = new BfMaskWindowCanvas(
+//				this,
+//				main,
+//				"View heat maps of well properties including live, bead, dud, ambigiuous etc",
+//				x, y);
+		
+		etWindow = new ETWindowCanvas(
 				this,
 				main,
-				"View heat maps of well properties including live, bead, dud, ambigiuous etc",
+				"View regional average empty traces on top of bf heat map (live, bead, dud, ambigiuous etc)",
 				x, y);
 		chipWindow = new WholeChipWindowCanvas(this, main,
 				"View raw data of any flow and frame of the entire chip", x, y);
 		scoreWindow = new ScoreMaskWindowCanvas(
 				this,
 				main,
-				"Find perfect reads, sequence substrings or alignment patterns - and create masks from the results",
+				"Create custom masks based on Q values, beadfind and other scores, find perfect reads, sequence substrings or alignment patterns - and create masks from the results that can be used in XYZ charts or in Fit/Process",
 				x, y);
 		tableWindow = new TableWindow(
 				this,
@@ -354,7 +428,7 @@ public class TSVaadin extends Application implements
 				"View/Export timeseries of many wells in a region, find signals ",
 				x, y + 300);
 		fitWindow = new FitWindowCanvas(this, main,
-				"Create masks with histograms based on the timeseries data", x,
+				"Create custom masks based on with histograms of the raw timeseries data", x,
 				y);
 		automateWindow = new AutomateWindow(this, main,
 				"Compute mean signal for an entire area of a selected mask",
@@ -363,13 +437,31 @@ public class TSVaadin extends Application implements
 				"View and edit masks, and export data to file based on a mask",
 				x, y);
 
+		xyWindow = new XYWindow(
+				this,
+				main,
+				"Computes XY charts based on masks (such as Q17 length versus SNR)",
+				x + 600, y);
+
+		regionalWindow = new RegionChartWindow(
+				this,
+				main,
+				"Show regional data charts such as empty traces (by frame)",
+				x , y);
+		regionalPropWindow = new RegionPropertyChartWindow(
+				this,
+				main,
+				"Charts of per flow properties (such as step size)",
+				x , y+200);
+
 		helpWindow = new HelpWindow(this, main,
 				"Help on all the components. Current version " + VERSION,
 				x + 600, y);
 
 		windows.add(dbWindow);
 		windows.add(expWindow);
-		windows.add(maskWindow);
+		//windows.add(maskWindow);
+		windows.add(etWindow);
 		windows.add(chipWindow);
 		windows.add(scoreWindow);
 		windows.add(geneWindow);
@@ -380,7 +472,8 @@ public class TSVaadin extends Application implements
 		windows.add(compWindow);
 		windows.add(processWindow);
 		windows.add(fitWindow);
-
+		windows.add(regionalWindow);
+		windows.add(regionalPropWindow);
 		windows.add(automateWindow);
 		windows.add(maskeditWindow);
 
@@ -434,6 +527,7 @@ public class TSVaadin extends Application implements
 			msg += "<li>raw dir:" + exp.getRawDir() + "</li>";
 			msg += "<li>chip type:" + exp.getChipType() + "</li>";
 			msg += "<li>flow order:" + exp.getFlowOrder() + "</li>";
+			
 			msg += "<li>Library key:" + exp.getLibraryKey() + "</li>";
 			msg += "<li>flows:" + exp.getNrFlows() + "</li>";
 			msg += "<li>rows:" + exp.getNrrows() + "</li>";
@@ -453,10 +547,11 @@ public class TSVaadin extends Application implements
 		msg += "<li>Performance/App Info</li>";
 		msg += "<ul>";
 		msg += "<li>Application version " + VERSION + "</li>";
-		
+
 		msg += "<li>Session timeout " + getTimeout() + " minutes</li>";
-		//msg += "<li>Session keepAlive " + sessionGuard.isKeptAlive() + "</li>";
-	    
+		// msg += "<li>Session keepAlive " + sessionGuard.isKeptAlive() +
+		// "</li>";
+
 		msg += "<li>Current free memory in MB for app: "
 				+ (int) perf.getFreeMb() + "</li>";
 		msg += "<li>Total memory in MB availble to app: "
@@ -599,6 +694,21 @@ public class TSVaadin extends Application implements
 			maincont = new ExplorerContext(exp);
 			maincont.setRasterSize(raster);
 			maincont.setSpan(8);
+			loader = new DataCubeLoader(maincont);
+			// notify any windows of change
+			for (WindowOpener win: windows) {
+				win.experimentChanged();
+			}
+			labelexperiment.setValue(exp.getResultsName());
+			String msg = "Experiment name: " + exp.getExperimentName() + "<br>";
+			msg += "PGM: " + exp.getPgm()+ "<br>";
+			msg += "Chip type: " + exp.getChipType() + "<br>";
+			msg += "Raw Folder: " + exp.getRawDir() + "<br>";
+			msg += "Results Folder: " + exp.getResultsDirectory() + "<br>";
+			msg += "Nr flows: " + exp.getNrFlows() + "<br>";						
+			msg += "FTP Status: " + exp.getStatus();			
+			labelexperiment.setDescription(msg);
+			
 		}
 		if (exp == null) {
 			expWindow.setDescription("Got no experiment context");
@@ -608,6 +718,9 @@ public class TSVaadin extends Application implements
 		}
 	}
 
+	public DataCubeLoader getCubeLoader() {
+		return loader;
+	}
 	public void showExperiment() {
 		if (exp == null) {
 			return;
@@ -633,13 +746,15 @@ public class TSVaadin extends Application implements
 			else
 				tableWindow.close();
 		}
-		maskWindow.clear();
+		//maskWindow.clear();
+		etWindow.clear();
 		this.scoreWindow.clear();
 		this.processWindow.clear();
 		// tabsheet.setSelectedTab(viewTab);
 		if (!exp.doesExplogHaveBlocks()) {
 			if (exp.hasBfMask()) {
-				maskWindow.open();
+				//maskWindow.open();
+				etWindow.open();
 			} else if (exp.hasDat()) {
 				this.chipWindow.open();
 			} else {
@@ -656,6 +771,9 @@ public class TSVaadin extends Application implements
 	}
 
 	public String getServer() {
+		if (server == null) {
+			getIpInfo();
+		}
 		return server;
 	}
 
@@ -693,6 +811,13 @@ public class TSVaadin extends Application implements
 			// rawWindow.open();
 		} else {
 			fitWindow.reopen();
+		}
+	}
+	public void reopenRegional() {
+		if (!regionalWindow.isOpen()) {
+			// rawWindow.open();
+		} else {
+			regionalWindow.reopen();
 		}
 	}
 
@@ -773,46 +898,63 @@ public class TSVaadin extends Application implements
 	}
 
 	public String getDbURL() {
-		if (url != null && url.length() > 5) {
-			if (!url.endsWith(":5432/iondb"))
-				url = url + ":5432/iondb";
-			return url;
+		if (dburl != null && dburl.length() > 5) {
+			if (!dburl.endsWith(":5432/iondb"))
+				dburl = dburl + ":5432/iondb";
+			return dburl;
 		}
-		if (url == null || url.length() < 5)
-			url = getValue("db");
-		if (url == null) {
-			url = "localhost:5432/iondb";
+		if (dburl == null || dburl.length() < 5) {
+			p("Trying to get db url from parameters");
+			dburl = getValue("db");
+		}
+
+		if (dburl == null || dburl.length() < 1) {
+			p("Building dburl from server " + server);
+			dburl = server + ":5432/iondb";
 		} else {
-			url = url + ":5432/iondb";
+			dburl = dburl + ":5432/iondb";
 		}
 		if (server != null) {
-			if (server.startsWith("10.25.3")
+			if (server.startsWith("ecto") || server.startsWith("rnd1.ite") || server.startsWith("10.25.3")
 					&& !server.startsWith("10.25.3.240")) {
 				// 240 is blackbird.ite
-				url = "ioneast.ite:5432/iondb";
+				dburl = "ioneast.ite:5432/iondb";
 				p("Got ioneast db url");
+				
+			} else if (server.startsWith("blackbird.itw")) {
+				dburl =  "10.45.3.167:5432/iondb";
+				
 			} else if (server.startsWith("10.33.106")) {
-				url = "10.33.106.11:5432/iondb";
+				dburl = "10.33.106.11:5432/iondb";
 				p("Got carlsbad db url");
-			} else if (server.startsWith("10.45.3")
+			} else if (server.startsWith("rnd3.itw")
+					|| server.startsWith("tahiti")
+					|| server.startsWith("10.45.3")
 					&& !server.startsWith("10.45.3.167")) {
 				// 167 is blackbird.itw
-				url = "10.45.3.90:5432/iondb";
+				dburl = "ionwest.itw:5432/iondb";
 				p("Got ion west db url");
-			} else if (server.startsWith("172.18.241.195")) {
-				url = "aruba.apg.per.na.ab.applera.net:5432/iondb";
+			} else if (server.startsWith("rndbev")
+					|| server.startsWith("172.18.241.195")) {
+				dburl = "aruba.apg.per.na.ab.applera.net:5432/iondb";
+				p("Got aruba db url");
+			} else if (server.startsWith("nog.ite")) {
+				dburl = "blackbird.ite:5432/iondb";
 				p("Got aruba db url");
 			}
 		}
 
-		p("Got DB URL:" + url);
-		return url;
+		p("Got DB URL:" + dburl);
+		return dburl;
 	}
 
 	public String getServerName() {
 		String db = getDbURL();
-		if (db.startsWith("localhost") || db.startsWith("127.0.0.1"))
-			db = server;
+		if (db.startsWith("localhost") || db.startsWith("127.0.0.1")) {
+			db = getServer();
+		}
+		p("Got servername: " + getServer());
+		p("Got db: " + db);
 		// 10.33.106.11:5432/iondb
 		int col = db.lastIndexOf(":");
 		if (col > 0)
@@ -833,7 +975,7 @@ public class TSVaadin extends Application implements
 
 	public void onRequestStart(HttpServletRequest request,
 			HttpServletResponse response) {
-		server = request.getLocalAddr();
+		// server = request.getLocalAddr();
 		// p("Server address: " +server+"/"+request.getServerName());
 		// p("Remote Adress: " + request.getRemoteAddr());
 		remote = request.getRemoteAddr();
@@ -845,8 +987,7 @@ public class TSVaadin extends Application implements
 	}
 
 	public void logModule(String modulename, String function) {
-		logStats("tsl_modulestats.csv", modulename + ", " + function,
-				"module, function");
+		logStats(MODSTATS, modulename + ", " + function, "module, function");
 	}
 
 	/** appens the current time, date, memory and cpu usage to a log file */
@@ -867,10 +1008,10 @@ public class TSVaadin extends Application implements
 				+ (cal.get(Calendar.MONTH) + 1) + "-"
 				+ cal.get(Calendar.DAY_OF_MONTH);
 		String info = ds + ", " + loginfo + ", " + remote + "\n";
-		
-		String name = logfolder.getAbsolutePath() ;
+
+		String name = logfolder.getAbsolutePath();
 		name = FileTools.addSlashOrBackslash(name);
-		
+
 		File f = new File(name + filename);
 		startLogStatsFile(f, header);
 		FileTools.writeStringToFile(f, info, true);
@@ -879,62 +1020,36 @@ public class TSVaadin extends Application implements
 	}
 
 	private File getLogFolder() {
-
 		File f = null;
-		
-		String base = SystemTool.getInfo("CATALINA_HOME");
-		p("Catalina home: "+base);
-		if (base != null && base.length()>1) {
-			f = new File(base+"/logs");
+		for (String dir : LOGDIRS) {
+			f = new File(dir);
 			if (f.exists() && canWrite1(f))
-				return f;		
+				return f;
 		}
-		f = new File("/var/log/tomcat6/");
-		if (f.exists() && canWrite1(f))
-			return f;
-		f = new File("/var/log/tomcat7/");
-		if (f.exists() && canWrite1(f))
-			return f;
-		f = new File("/results/log/");
-		if (f.exists() && canWrite1(f))
-			return f;
-		f = new File("/tmp/");
-		if (f.exists() && canWrite1(f))
-			return f;
-
-		f = new File("./");
-		if (f.exists() && canWrite1(f))
-			return f;
-		
-		f = new File("~/");
-		if (f.exists() && canWrite1(f))
-			return f;
-		
-		f = new File("/var/log/tomcat6/");
 		return f;
 	}
 
 	private boolean canWrite2(File dir) {
 		String path = dir.getAbsolutePath();
-		path = FileTools.addSlashOrBackslash(path)+"*";
+		path = FileTools.addSlashOrBackslash(path) + "*";
 		try {
 			AccessController.checkPermission(new FilePermission(path,
 					"read,write"));
 			return true;
 		} catch (SecurityException e) {
-			p("Cannot write to "+path);
+			p("Cannot write to " + path);
 			return false;
 		}
 	}
 
 	private boolean canWrite1(File dir) {
-		File sample = new File(dir.getAbsolutePath()+"/tmp.txt");
+		File sample = new File(dir.getAbsolutePath() + "/tmp.txt");
 		try {
 			sample.createNewFile();
 			sample.delete();
 			return true;
 		} catch (Exception e) {
-			p("Cannot create and delete "+sample+":"+e.getMessage());
+			p("Cannot create and delete " + sample + ":" + e.getMessage());
 		}
 		return false;
 	}
@@ -958,7 +1073,7 @@ public class TSVaadin extends Application implements
 	}
 
 	public void setDbURL(String string) {
-		this.url = string;
+		this.dburl = string;
 
 	}
 
@@ -979,6 +1094,13 @@ public class TSVaadin extends Application implements
 			// tableWindow.open();
 		} else
 			tableWindow.reopen();
+	}
+
+	public void reopenScore() {
+		if (!this.scoreWindow.isOpen()) {
+			scoreWindow.open();
+		} else
+			scoreWindow.reopen();
 	}
 
 	public void reopenAlign() {
@@ -1004,5 +1126,10 @@ public class TSVaadin extends Application implements
 				scoremask = new ScoreMask(exp, exp.getWellContext());
 		}
 		return scoremask;
+	}
+
+	public void openDb() {
+		this.dbWindow.open();
+		
 	}
 }

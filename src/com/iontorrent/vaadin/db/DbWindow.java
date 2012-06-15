@@ -151,7 +151,7 @@ public class DbWindow extends WindowOpener {
 		createDbContext();
 
 		if (entityManager == null) {
-			mainwindow.showNotification("No db found", "<br/>Could not connect to db " + getURL() + "<br>Specify it in the URL with ?url=...", Window.Notification.TYPE_WARNING_MESSAGE);
+			appwindow.showNotification("No db found", "<br/>Could not connect to db " + getURL() + "<br>Specify it in the URL with ?url=...", Window.Notification.TYPE_WARNING_MESSAGE);
 			return;
 		}
 		loadDataAfterGotContext();
@@ -201,7 +201,7 @@ public class DbWindow extends WindowOpener {
 			public void buttonClick(Button.ClickEvent event) {
 				// app.setExperimentContext(context);
 				if (context == null) {
-					mainwindow.showNotification("No analysis selected", "<br/>Select a run under the PGM/Experiment nodes", Window.Notification.TYPE_HUMANIZED_MESSAGE);
+					appwindow.showNotification("No analysis selected", "<br/>Select a run under the PGM/Experiment nodes", Window.Notification.TYPE_HUMANIZED_MESSAGE);
 				} else {
 					app.showExpContext(context);
 				}
@@ -237,7 +237,7 @@ public class DbWindow extends WindowOpener {
 	}
 	public void doFilterAction() {
 		// ask for past days
-		OptionsDialog input = new OptionsDialog(mainwindow, 
+		OptionsDialog input = new OptionsDialog(mywindow, 
 				"How would you like to filter the db runs?", "Filter by...", "... runs of last X days", 
 				"... experiments containing string X", 
 				new OptionsDialog.Recipient() {
@@ -248,7 +248,7 @@ public class DbWindow extends WindowOpener {
 				// / do the search
 				if (selection == 0) {
 					// ask for nr of days
-					IntInputDialog input = new IntInputDialog(mainwindow, "Find runs", "Find runs of last X days:", new IntInputDialog.Recipient() {
+					IntInputDialog input = new IntInputDialog(mywindow, "Find runs", "Find runs of last X days:", new IntInputDialog.Recipient() {
 						@Override
 						public void gotInput(int days) {							
 							if (days >0 ) {								
@@ -265,7 +265,7 @@ public class DbWindow extends WindowOpener {
 				else if (selection == 1) {
 					// ask for flows
 					// ExpNamesNodeFilter
-					InputDialog input = new InputDialog(mainwindow, "Experiment name contains string:", new InputDialog.Recipient() {
+					InputDialog input = new InputDialog(mywindow, "Experiment name contains string:", new InputDialog.Recipient() {
 						public void gotInput(String name) {							
 							if (name == null || name.trim().length()<1) return;						
 							 expfilter = new ExpNamesNodeFilter(name);
@@ -461,7 +461,7 @@ public class DbWindow extends WindowOpener {
 		}
 		if (!ok) {
 			db.setComponentError(new UserError("Could not connect to " + getURL()));
-			mainwindow.showNotification("Db problem", "<br/>Could not connect to " + getURL(), Window.Notification.TYPE_WARNING_MESSAGE);
+			appwindow.showNotification("Db problem", "<br/>Could not connect to " + getURL(), Window.Notification.TYPE_WARNING_MESSAGE);
 		}
 	}
 
@@ -484,7 +484,7 @@ public class DbWindow extends WindowOpener {
 		// entityManager.createQuery("SELECT c FROM RundbReportstorage c");
 		// storages = query.getResultList();
 		if (allexperiments == null || allexperiments.size() < 1) {
-			mainwindow.showNotification("No experiments found", "<br/>I found no data in the database", Window.Notification.TYPE_WARNING_MESSAGE);
+			appwindow.showNotification("No experiments found", "<br/>I found no data in the database", Window.Notification.TYPE_WARNING_MESSAGE);
 			return;
 		}
 		p("Nr of all (past 6 months) experiments: " + allexperiments.size());

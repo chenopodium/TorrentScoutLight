@@ -94,7 +94,7 @@ public class ExperimentWindow extends WindowOpener {
 		// Component with an icon from a custom theme
 		results = new TextField();
 		results.setWidth(w);
-		results.setDescription("The folder with the bfmask.bin, 1.wells, .bam and .sff files");
+		results.setDescription("The folder that contains all results data, including bfmask.bin (possibly in a subfolder), 1.wells, .bam and .sff files (in the basecaller folder)");
 		results.setValue(exp.getResultsDirectory());
 		results.setRequired(true);
 		results.setImmediate(true);
@@ -151,7 +151,7 @@ public class ExperimentWindow extends WindowOpener {
 		h.addComponent(bca, 2, y++);
 
 		sff = new TextField();
-		sff.setValue(exp.getResultsDirectory() + exp.getSffFileName());
+		sff.setValue(exp.getSffFilePath());
 		sff.setWidth(w);
 		sff.setImmediate(true);
 		sff.setDescription("To view ionograms, find reads based on quality and sequenece, and to view alignment, specify a .sff file");
@@ -169,7 +169,7 @@ public class ExperimentWindow extends WindowOpener {
 		h.addComponent(bsff, 2, y++);
 
 		bam = new TextField();
-		bam.setValue(exp.getResultsDirectory() + exp.getBamFileName());
+		bam.setValue(exp.getBamFilePath());
 		bam.setWidth(w);
 		bam.setDescription("To find reads based on alignment patterns, matches and to view alignment, specify a .bam file");
 		h.addComponent(new Label("BAM file"), 0, y);
@@ -237,7 +237,7 @@ public class ExperimentWindow extends WindowOpener {
 				exp.setRawDir("/results/R_2011_10_26_18_31_34_user_COR-4");
 				exp.setResultsDirectory("/results/R_2011_10_26_18_31_34_user_COR-4");
 				exp.setCacheDir("/home/ionadmin/tmp");
-			} else if (app.getServer().startsWith("0.0") || app.getServer().startsWith("127.0") || app.getServer().startsWith("local")) { // localhost
+			} else if ( app.getServer().toLowerCase().startsWith("pando") || app.getServer().startsWith("10.0.0.") || app.getServer().startsWith("192.168.") || app.getServer().startsWith("0.0") || app.getServer().startsWith("127.0") || app.getServer().startsWith("local")) { // localhost
 				exp.setChipType("314");
 				//exp.setSffFilename("R_2011_06_19_15_31_08_user_JIM-279-r118902-1t_08_enriched-br_Auto_JIM-279-r118902-1t_08_enriched-br_4711.sff");
 			//	exp.setBamFilename("R_2011_06_19_15_31_08_user_JIM-279-r118902-1t_08_enriched-br_Auto_JIM-279-r118902-1t_08_enriched-br_4711.bam");
@@ -299,12 +299,12 @@ public class ExperimentWindow extends WindowOpener {
 		}
 		// check for sff
 		if (!exp.hasBam()) {
-			String file = SequenceLoader.findFile(".bam", exp.getResultsDirectory(), false, "tf.bam", false);
+			String file = SequenceLoader.findFile(".bam", exp.getBasecallerDir(), false, "tf.bam", false);
 			p("Trying to find bam with sequence loader:" + file);
 			if (file != null) exp.setBamFilename(new File(file).getName());
 		}
 		if (!exp.hasSff()) {
-			String file = SequenceLoader.findFile(".sff", exp.getResultsDirectory(), false, "tf.sff", false);
+			String file = SequenceLoader.findFile(".sff", exp.getBasecallerDir(), false, "tf.sff", false);
 			p("Trying to find sff with sequence loader:" + file);
 			if (file != null) exp.setSffFilename(new File(file).getName());
 		}
@@ -457,7 +457,7 @@ public class ExperimentWindow extends WindowOpener {
 				return true;
 			}
 
-		}, FileBrowserWindow.OPEN, mainwindow, new File("" + tf.getValue()), ext);
+		}, FileBrowserWindow.OPEN, appwindow, new File("" + tf.getValue()), ext);
 		browser.open();
 	}
 

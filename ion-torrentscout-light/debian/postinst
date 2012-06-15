@@ -19,7 +19,7 @@ case "$1" in
         #changing user to ionadmin breaks the server - doesn't start
         #sed -i "s/.*TOMCAT6_USER.*/TOMCAT6_USER=ionadmin/" $conffile
 		# change number of days logs are kept 
-		sed -i "s/#LOGFILE_DAYS=14/LOGFILE_DAYS=3/" $conffile
+		sed -i "s/#LOGFILE_DAYS=14/LOGFILE_DAYS=3/g" $conffile
         sed -i 's/.*JAVA_OPTS="-Djava.awt.headless.*"/JAVA_OPTS="-Djava.awt.headless=true -Xms2048m -Xmx8096m -XX:MaxPermSize=512M"/' $conffile
 
 		conffile=/var/lib/tomcat6/conf/logging.properties
@@ -30,6 +30,28 @@ case "$1" in
 		sed -i "s/.handlers = 1catalina.org.apache.juli.FileHandler, java.util.logging.ConsoleHandler/.handlers = 1catalina.org.apache.juli.FileHandler/g" $conffile
 		sed -i "s/#org.apache.catalina/org.apache.catalina/g" $conffile
 		sed -i "s/org.apache.catalina.startup.ContextConfig.level/com.iontorrent.level/g" $conffile
+		
+		# connect apache and tomcat if not already done via tsl worker in tslworkers.properties
+		if [ -f /etc/apache2/sites-enabled/000-default ]; then		
+			conffile=/etc/apache2/sites-enabled/000-default
+		fi
+		if [ -f /etc/apache2/sites-enabled/torrent-server ]; then		
+			conffile=/etc/apache2/sites-enabled/torrent-server
+		fi
+		
+		
+		# insert several JkMount lines before the VirtualHost end
+		if ! grep "# Connection to Torrent Scout via tomcat" $conffile  1>/dev/null ; then
+			sed -i 's:\(</VirtualHost>\):\# Connection to Torrent Scout via tomcat\n    JkMount /TSL tsl\n    JkMount /TSL/* tsl\n    JkMount /LogServlet/* tsl\n    JkMount /LogServlet tsl\n </VirtualHost>:' $conffile
+		fi
+		
+		# enable the apache tomcat connector (port 8009) if we haven't already done so		
+		conffile=/var/lib/tomcat6/conf/server.xml
+		#<Connector port="8009" protocol="AJP/1.3" redirectPort="8443" />
+		if ! grep "<!--port 8009 enabled by Ion. Edited by debian/postinst -->" $conffile  1>/dev/null ; then
+			sed -i 's:\(<!-- Define an AJP 1.3 Connector on port 8009 -->\):\1\n<!--port 8009 enabled by Ion. Edited by debian/postinst -->\n<Connector port="8009" protocol="AJP/1.3" redirectPort="8443" />:'	$conffile		
+		fi
+		
 		
         # Edit /etc/tomcat6/tomcat-users.xml
         # Default has numerous commented-out example entries so here, we remove any existing
@@ -61,9 +83,13 @@ case "$1" in
 			echo "found existing folder /var/lib/tomcat6/webapps/torrentscout, will remove it (otherwise .war may not deploy correctly)"
 			rm -fr /var/lib/tomcat6/webapps/torrentscout
 		fi
+		# ionadmin for instance should have permissions to make changes if needed
+		chmod go+rw /var/lib/tomcat6/webapps
+		chmod go+rw /var/lib/tomcat6/webapps/*
 		
 		# start the server		
         /etc/init.d/tomcat6 start
+		/etc/init.d/apache2 reload
     ;;
 esac
 

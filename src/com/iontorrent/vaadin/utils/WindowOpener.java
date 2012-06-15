@@ -12,6 +12,7 @@ import com.vaadin.ui.Button;
 import com.vaadin.ui.CustomComponent;
 import com.vaadin.ui.Layout;
 import com.vaadin.ui.MenuBar;
+import com.vaadin.ui.TextField;
 import com.vaadin.ui.MenuBar.MenuItem;
 import com.vaadin.ui.VerticalLayout;
 import com.vaadin.ui.Window;
@@ -24,7 +25,7 @@ import com.vaadin.ui.Window.CloseEvent;
  */
 public abstract class WindowOpener extends CustomComponent implements Window.CloseListener, MenuBar.Command {
 
-    protected Window mainwindow;  // Reference to main window
+    protected Window appwindow;  // Reference to main window
     protected Window mywindow;    // The window to be opened
  //   private Button openbutton;  // Button for opening the window
     // Button closebutton; // A button in the window
@@ -37,7 +38,8 @@ public abstract class WindowOpener extends CustomComponent implements Window.Clo
     private TSVaadin app;
     
     public WindowOpener(String label, Window main, String description, int x, int y, int w, int h) {
-        mainwindow = main;
+        if (main.getParent() == null) appwindow = main;
+        else appwindow = main.getParent();
         this.app = (TSVaadin)main.getApplication();
         this.name = label;
         this.location_x = x;
@@ -53,6 +55,16 @@ public abstract class WindowOpener extends CustomComponent implements Window.Clo
         // layout.addComponent(explanation);
         setCompositionRoot(layout);
     }
+    protected boolean checkExperimentOpened() {
+		if (app.getExperimentContext() == null) {
+			appwindow.showNotification("No Experiment Selected",
+					"<br/>Please open an experiment first",
+					Window.Notification.TYPE_WARNING_MESSAGE);
+			app.openDb();
+			return false;
+		}
+		else return true;
+    }
     public void clear(){}
     
     public abstract String getHelpMessage();
@@ -64,6 +76,18 @@ public abstract class WindowOpener extends CustomComponent implements Window.Clo
         return isOpen;
     }
 
+    protected int parseInt(TextField t) {
+		int i = Integer.MAX_VALUE;
+		String s = "" + t.getValue();
+		if (s != null) {
+			try {
+				i = Integer.parseInt(s);				
+			}
+			catch (Exception e){}
+		}
+		return i;
+	}
+    
     @Override
     public void setDescription(String desc) {
     //    openbutton.setDescription("<h2><img src=\"/TSL/VAADIN/themes/torrentscout/img/note.png\"/>"
@@ -74,7 +98,7 @@ public abstract class WindowOpener extends CustomComponent implements Window.Clo
     public void close() {
         isOpen = false;
         p("Closing window " + name);
-        mainwindow.removeWindow(mywindow);
+        appwindow.removeWindow(mywindow);
        // openbutton.setEnabled(true);
         
         // for debugging
@@ -122,7 +146,7 @@ public abstract class WindowOpener extends CustomComponent implements Window.Clo
         mywindow.setWidth(width + "px");
         /* Add the window inside the main window. */
         
-        mainwindow.addWindow(mywindow);
+        appwindow.addWindow(mywindow);
         /* Listen for close events for the window. */
         mywindow.addListener(this);
         /* Add components in the window. */
@@ -143,7 +167,7 @@ public abstract class WindowOpener extends CustomComponent implements Window.Clo
     /** Handle Close button click and close the window. */
     public void closeButtonClick(Button.ClickEvent event) {
         /* Windows are managed by the application object. */
-        mainwindow.removeWindow(mywindow);
+        appwindow.removeWindow(mywindow);
         isOpen = false;
         /* Return to initial state. */
    //     openbutton.setEnabled(true);
@@ -166,6 +190,10 @@ public abstract class WindowOpener extends CustomComponent implements Window.Clo
 	public void menuSelected(MenuItem selectedItem) {
 		this.open();
 		
+	}
+	public void experimentChanged() {
+		// overwrite if something important needs to happen
+		// for instance if cachces have to be cleared.
 	}
 
   

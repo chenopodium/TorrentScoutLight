@@ -33,4 +33,6 @@
     <inherits name="org.vaadin.codelabel.CodelabelWidgetset" />
 
     <inherits name="org.vaadin.contrib.processing.svg.gwt.ProcessingSVGWidgetSet" />
+
+    <inherits name="org.vaadin.vaadinvisualizations.widgetset.VaadinvisualizationApplicationWidgetset" />
 </module>

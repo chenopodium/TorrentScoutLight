@@ -70,14 +70,14 @@ public class WholeChipWindowCanvas extends WindowOpener implements Button.ClickL
 	@Override
 	public void openButtonClick(Button.ClickEvent event) {
 		if (app.getExperimentContext() == null) {
-			mainwindow.showNotification("No Experiment Selected", "<br/>Please open an experiment first", Window.Notification.TYPE_WARNING_MESSAGE);
+			appwindow.showNotification("No Experiment Selected", "<br/>Please open an experiment first", Window.Notification.TYPE_WARNING_MESSAGE);
 			return;
 		}
 		exp = app.getExperimentContext();
 		// check if there are actually raw files...
 		if (!exp.hasDat(type, flow)) {
 			String file = type.getRawFileName(flow);
-			mainwindow.showNotification("No .dat file", "<br/>I don't see the dat file "+file+"in "+exp.getRawDir(), Window.Notification.TYPE_WARNING_MESSAGE);
+			appwindow.showNotification("No .dat file", "<br/>I don't see the dat file "+file+"in "+exp.getRawDir(), Window.Notification.TYPE_WARNING_MESSAGE);
 		//	return;
 		} 
 		
@@ -150,14 +150,10 @@ public class WholeChipWindowCanvas extends WindowOpener implements Button.ClickL
 		imageresource = new StreamResource((StreamResource.StreamSource) bfmask, exp.getFileKey() + "_"+flow+"_"+frame+"_"+type+".png", app);
 		imageresource.setCacheTime(10000);
 		
-		String relative = imageresource.getApplication().getRelativeLocation(imageresource);	
-		String appurl = imageresource.getApplication().getURL().toString();
-		String url = relative;
-		url = appurl + url.replace("app://", "");
-		p("URl from stream resource is: " + url);
+		String bg =  app.getBgUrl(imageresource.getApplication().getRelativeLocation(imageresource));
 	//	app.getMainWindow().open(imageresource, "_blank");
-		addCanvas(mywindow, url);
-		app.showMessage(this, "Drag the cursor to select a different well/area");
+		addCanvas(mywindow, bg);
+		app.showMessage(this, "Click on the heat map to select a different well/area");
 		
 		canvas.addListener(new Canvas.CanvasMouseUpListener() {
 
@@ -166,10 +162,10 @@ public class WholeChipWindowCanvas extends WindowOpener implements Button.ClickL
 				int newx = (int) p.getX();
 				int newy = (int) p.getY();
 				p("Got mouse UP on canvas: "+p+", child="+child);
-				if (child != null && child instanceof Polygon) {
+			//	if (child != null && child instanceof Polygon) {
 					x = newx;
 					y = newy;
-					Polygon po = (Polygon)child;
+			//		Polygon po = (Polygon)child;
 			//		p("Location of child po: "+po.getCenter());
 					
 					WellCoordinate coord = bfmask.getWellCoordinate(x, y);
@@ -180,7 +176,7 @@ public class WholeChipWindowCanvas extends WindowOpener implements Button.ClickL
 					buttonClick(null);
 				}
 			//	poly.moveTo(p);
-			}
+		//	}
 		});
 	}
 	public String getHelpMessage() {
@@ -220,15 +216,15 @@ public class WholeChipWindowCanvas extends WindowOpener implements Button.ClickL
 		    return true;
 	}
 
-	private void addCanvas(final Window mywindow, String url) {
+	private void addCanvas(final Window mywindow, String bg) {
 		canvas = new Canvas();
 		canvas.setBackgroundColor("black");
 
 		java.awt.Point point = bfmask.getPointFromWell(coord);
-		Cross cross = new Cross((int)point.getX(), (int)point.getY(), 3, 5);
-		canvas.drawUIElement(cross);
+//		Cross cross = new Cross((int)point.getX(), (int)point.getY(), 3, 5);
+//		canvas.drawUIElement(cross);
 
-		String bg = url;
+		
 		canvas.setBackgroundImage(bg);
 		mywindow.addComponent(canvas);
 	}

@@ -4,6 +4,8 @@
  */
 package com.iontorrent.vaadin.automate;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.logging.Level;
@@ -11,11 +13,13 @@ import java.util.logging.Logger;
 
 import org.iontorrent.acqview.MultiAcqPanel;
 import org.iontorrent.acqview.MultiFlowPanel;
+import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
 
 import com.iontorrent.expmodel.ExperimentContext;
 import com.iontorrent.rawdataaccess.pgmacquisition.DataAccessManager;
 import com.iontorrent.rawdataaccess.pgmacquisition.RawType;
+import com.iontorrent.rawdataaccess.wells.BitMask;
 import com.iontorrent.threads.Task;
 import com.iontorrent.threads.TaskListener;
 import com.iontorrent.torrentscout.explorer.ExplorerContext;
@@ -24,7 +28,10 @@ import com.iontorrent.utils.ProgressListener;
 import com.iontorrent.utils.StringTools;
 import com.iontorrent.vaadin.TSVaadin;
 import com.iontorrent.vaadin.utils.CoordSelect;
+import com.iontorrent.vaadin.utils.ExportTool;
+import com.iontorrent.vaadin.utils.FileDownloadResource;
 import com.iontorrent.vaadin.utils.OkDialog;
+import com.iontorrent.vaadin.utils.OptionsDialog;
 import com.iontorrent.vaadin.utils.WindowOpener;
 import com.iontorrent.wellalgorithms.NearestNeighbor;
 import com.iontorrent.wellalgorithms.WellAlgorithm;
@@ -43,6 +50,7 @@ import com.vaadin.ui.Embedded;
 import com.vaadin.ui.HorizontalLayout;
 import com.vaadin.ui.JFreeChartWrapper;
 import com.vaadin.ui.Label;
+import com.vaadin.ui.NativeButton;
 import com.vaadin.ui.ProgressIndicator;
 import com.vaadin.ui.Select;
 import com.vaadin.ui.TabSheet;
@@ -74,11 +82,15 @@ public class AutomateWindow extends WindowOpener implements Button.ClickListener
 	ArrayList<Integer> flows;
 	ProgressIndicator indicator;
 	boolean dosubtract;
+	VerticalLayout optionsTab ;
 	RasterData maindata;
 	DataAccessManager manager;
 	private int subtractflow = -1;
+	JFreeChart singlechart;
+	JFreeChart flowchart;
 	WellFlowDataResult subtract;
 	WellFlowDataResult multiflow;
+	VerticalLayout dataTab;
 	private RawType type;
 	private VerticalLayout chartTab;
 	private VerticalLayout multichartTab;
@@ -103,21 +115,37 @@ public class AutomateWindow extends WindowOpener implements Button.ClickListener
 		super("Automate (mean signal)", main, description, x, y, 600, 500);
 		this.app = app;
 	}
-
 	@Override
-	public void windowOpened(Window mywindow) {
+	public void openButtonClick(Button.ClickEvent event) {
+		if (!super.checkExperimentOpened()) return;
+		this.exp = app.getExperimentContext();
+		if (app.getExperimentContext().getWellContext() == null) {
+			appwindow.showNotification("No Location Selected", "<br/>Please pick an area", Window.Notification.TYPE_WARNING_MESSAGE);
+			return;
+		}
 
+		if (exp.getWellContext().getCoordinate() == null) {
+			coord = exp.getWellContext().getCoordinate();
+			if (coord == null) {
+				p("Coord is null, creating a new coord");
+				coord = new WellCoordinate(100, 100);
+				app.setWellCoordinate(coord);
+			}
+		}
+		app.reopenMaskedit(true);
 		exp = app.getExperimentContext();
 		maincont = app.getExplorerContext();
 		RasterData data = maincont.getData();
 
 		if (data == null) {
-			mainwindow.showNotification("No Data Loaded", "<br/>Opening the Process and Mask component first", Window.Notification.TYPE_WARNING_MESSAGE);
 			app.reopenProcess(true);
-
-			app.reopenMaskedit(true);
-			// return;
 		}
+		
+		super.openButtonClick(event);
+	}
+	@Override
+	public void windowOpened(Window mywindow) {
+	
 		
 		context = app.getExperimentContext().getWellContext();
 		coord = context.getCoordinate();
@@ -127,7 +155,7 @@ public class AutomateWindow extends WindowOpener implements Button.ClickListener
 		}
 
 		tabsheet = new TabSheet();
-
+		tabsheet.setImmediate(true);
 		chartTab = new VerticalLayout();
 		// chartTab.addComponent(new Label("Chart"));
 		tabsheet.addTab(chartTab);
@@ -138,11 +166,11 @@ public class AutomateWindow extends WindowOpener implements Button.ClickListener
 		tabsheet.addTab(multichartTab);
 		tabsheet.getTab(multichartTab).setCaption("Multi Chart");
 
-		VerticalLayout optionsTab = new VerticalLayout();
+		optionsTab = new VerticalLayout();
 		tabsheet.addTab(optionsTab);
 		tabsheet.getTab(optionsTab).setCaption("Options");
 
-		VerticalLayout dataTab = new VerticalLayout();
+		dataTab = new VerticalLayout();
 		tabsheet.addTab(dataTab);
 		tabsheet.getTab(dataTab).setCaption("Data");
 
@@ -159,28 +187,120 @@ public class AutomateWindow extends WindowOpener implements Button.ClickListener
 		}));
 
 		
-		 Button help = new Button();
-		 help.setDescription("Click me to get information on this window");
-		 help.setIcon(new ThemeResource("img/help-hint.png"));
-	        tophor.addComponent(help);
-	        help.addListener(new Button.ClickListener() {
-	            public void buttonClick(Button.ClickEvent event) {
-	            	 app.showHelpMessage("Help", getHelpMessage());
-	            }
-
-				
-	        });
 	        
 		mywindow.addComponent(tophor);
 
-		mywindow.addComponent(tabsheet);
+		VerticalLayout vzoom = new VerticalLayout();
+		NativeButton help = new NativeButton();
+		help.setStyleName("nopadding");
+		help.setDescription("Click me to get information on this window");
+		help.setIcon(new ThemeResource("img/help-hint.png"));
+		
+		help.addListener(new Button.ClickListener() {
+			public void buttonClick(Button.ClickEvent event) {
+				app.showHelpMessage("Help", getHelpMessage());
+			}
+		});
+		
+		final NativeButton options = new NativeButton();
+		options.setStyleName("nopadding");
+		options.setIcon(new ThemeResource("img/configure-3.png"));
+		options.setDescription("Options (such as file type or if a flow should be subtracted)");
+		options.addListener(new Button.ClickListener() {
+			@Override
+			public void buttonClick(ClickEvent event) {
+				doOptionAction();
+			}
+
+		});
+
+		final NativeButton export = new NativeButton();
+		export.setStyleName("nopadding");
+		export.setIcon(new ThemeResource("img/export.png"));
+		export.setDescription("Open image in another browser window so that you can save it to file");
+		export.addListener(new Button.ClickListener() {
+			@Override
+			public void buttonClick(com.vaadin.ui.Button.ClickEvent event) {
+				doExportAction();
+			}
+		});
+
+		HorizontalLayout hcan = new HorizontalLayout();
+		vzoom.addComponent(export);
+		vzoom.addComponent(options);
+		vzoom.addComponent(help);			
+		hcan.addComponent(vzoom);
+		mywindow.addComponent(hcan);
+		hcan.addComponent(tabsheet);
 		addOptions(optionsTab);
 		addChart(chartTab);
 		addMultiChart(multichartTab);
 		addData(dataTab);
 		addDataMulti(datamultiTab);
 
-		app.reopenMaskedit(true);
+		
+	}
+	public void doOptionAction() {
+		tabsheet.setSelectedTab(this.optionsTab);
+	}
+	public void doExportAction() {
+		String options[] =  { 
+				"... save chart images",
+				"... save data points", 				
+				"... raw data, ionograms, alignments for signal mask wells"};
+		
+		OptionsDialog input = new OptionsDialog(mywindow,
+				"What would you like to export?", "Export...",options,0,			
+				new OptionsDialog.Recipient() {
+
+					@Override
+					public void gotInput(final int selection) {
+						if (selection < 0)
+							return;
+						// / do the search
+						if (selection == 0) {
+							saveCharts();
+						} else if (selection == 1) {
+							tabsheet.setSelectedTab(dataTab);					
+						} else {
+							ExportTool export = new ExportTool(app, mywindow,
+									maincont.getSignalMask(), tophor);
+							export.doExportAction();
+
+						}
+					}
+
+				});
+	}
+	public void saveCharts() {
+		File f = null;
+		if (singlechart == null || flowchart == null) return;
+		String what = "automate";
+		for (int i = 0; i < 2; i++) {
+			try {
+				f = File.createTempFile("export_"+what+"_" + exp.getId() + maincont.getAbsoluteCorner().getCol() + "_"+i
+						+ "_"+ maincont.getAbsoluteCorner().getRow(), ".png");
+			} catch (IOException e) {
+	
+			}
+			if (f != null) {
+				f.deleteOnExit();
+				if (i == 0) this.exportPng(f, singlechart);
+				else this.exportPng(f, flowchart);
+				FileDownloadResource down = new FileDownloadResource(f, this.app);
+				app.getMainWindow().open(down, "_blank", 600, 600, 1);
+			}
+		}
+	
+	}
+	private void exportPng(File f, JFreeChart chart) {
+		// Draw png to bytestream
+		try {
+			ChartUtilities.saveChartAsPNG(f, chart, 600, 400, null);
+		} catch (IOException e) {
+			err("Could not save chart");
+			app.showError("Save Chart", "Could not save chart to " + f);
+		}
 	}
 	public String getHelpMessage() {
 		 String msg = "<ul>";
@@ -223,7 +343,7 @@ public class AutomateWindow extends WindowOpener implements Button.ClickListener
 			double perc = maincont.getSignalMask().computePercentage();
 			if (perc < 1) {
 				String question = "<html>The signal mask "+maincont.getSignalMask().getName()+" has only " + perc + "% wells, do you want to still use it?" + "<br><b>Did you already select a region?</b>" + "<br>You might want to use the MaskEditor (and <b>refresh</b> the masks possibly) to check them</html>";
-				OkDialog okdialog = new OkDialog(mainwindow, "Few wells", question, new OkDialog.Recipient() {
+				OkDialog okdialog = new OkDialog(mywindow, "Few wells", question, new OkDialog.Recipient() {
 					@Override
 					public void gotInput(String name) {
 						if (!name.equalsIgnoreCase("OK")) return;
@@ -238,7 +358,7 @@ public class AutomateWindow extends WindowOpener implements Button.ClickListener
 
 		if (maincont.getBgMask() != null && maincont.getBgMask().computePercentage() < 2) {
 			String question = "The bg mask only has " + maincont.getBgMask().computePercentage() + "% wells, do you want to still use it?";
-			OkDialog okdialog = new OkDialog(mainwindow, "Few wells", question, new OkDialog.Recipient() {
+			OkDialog okdialog = new OkDialog(mywindow, "Few wells", question, new OkDialog.Recipient() {
 				@Override
 				public void gotInput(String name) {
 					if (!name.equalsIgnoreCase("OK")) return;
@@ -295,9 +415,12 @@ public class AutomateWindow extends WindowOpener implements Button.ClickListener
 		p("=========== compute NN ==========");
 		p("Data before nn: " + maincont.getData());
 		int span = Math.max(4, this.maincont.getSpan());
-		NearestNeighbor nn = new NearestNeighbor(span, maincont.getMedianFunction());
+		maincont.getExp().setFlow(maincont.getFlow());
+		NearestNeighbor nn = new NearestNeighbor(maincont.getExp(), span, maincont.getMedianFunction());
 
-		RasterData nndata = nn.computeBetter(data, maincont.getIgnoreMask(), maincont.getBgMask(), prog, span);
+		boolean useBg = false;
+		// xxx FIX
+		RasterData nndata = nn.computeBetter(data, maincont.getIgnoreMask(), maincont.getBgMask(), prog, span, useBg);
 		p("Got nndata (frame 10) " + nndata.getValue(0, 0, 0, 10));
 		return nndata;
 	}
@@ -317,7 +440,7 @@ public class AutomateWindow extends WindowOpener implements Button.ClickListener
 
 			p("Got nndata for flow " + flow + " (frame 10): " + nndata.getValue(0, 0, 0, 10));
 			// now compute average
-			WellAlgorithm alg = new WellAlgorithm(null, maincont.getSpan(), false, maincont.getMedianFunction());
+			WellAlgorithm alg = new WellAlgorithm(maincont.getExp(), null, maincont.getSpan(), false, maincont.getMedianFunction());
 			p("Computing median on nndata " + nndata);
 
 			try {
@@ -442,6 +565,7 @@ public class AutomateWindow extends WindowOpener implements Button.ClickListener
 			// }
 			tophor.removeComponent(indicator);
 			updateMultiChart();
+			tabsheet.setSelectedTab(chartTab);
 		} else {
 			// p("Not all done yet: " + Arrays.toString(taskdone));
 		}
@@ -639,28 +763,7 @@ public class AutomateWindow extends WindowOpener implements Button.ClickListener
 		}
 	}
 
-	@Override
-	public void openButtonClick(Button.ClickEvent event) {
-		if (app.getExperimentContext() == null) {
-			mainwindow.showNotification("No Experiment Selected", "<br/>Please open an experiment first", Window.Notification.TYPE_WARNING_MESSAGE);
-			return;
-		}
-		this.exp = app.getExperimentContext();
-		if (app.getExperimentContext().getWellContext() == null) {
-			mainwindow.showNotification("No Location Selected", "<br/>Please pick an area", Window.Notification.TYPE_WARNING_MESSAGE);
-			return;
-		}
-
-		if (exp.getWellContext().getCoordinate() == null) {
-			coord = exp.getWellContext().getCoordinate();
-			if (coord == null) {
-				p("Coord is null, creating a new coord");
-				coord = new WellCoordinate(100, 100);
-				app.setWellCoordinate(coord);
-			}
-		}
-		super.openButtonClick(event);
-	}
+	
 
 	private void addOptions(AbstractLayout tab) {
 		HorizontalLayout h = new HorizontalLayout();
@@ -741,12 +844,12 @@ public class AutomateWindow extends WindowOpener implements Button.ClickListener
 
 	private Embedded createEmbeededFlowChart(MultiFlowPanel pan) {
 		p("create createEmbeededChart called");
-		JFreeChart chart = pan.getChart();
-		if (chart == null) {
+		flowchart = pan.getChart();
+		if (flowchart == null) {
 			p("Could not create JFreeChart object");
 			return null;
 		}
-		JFreeChartWrapper wrapper = new JFreeChartWrapper(chart);
+		JFreeChartWrapper wrapper = new JFreeChartWrapper(flowchart);
 		wrapper.setWidth("550px");
 		wrapper.setHeight("320px");
 		if (wrapper == null) {
@@ -758,12 +861,12 @@ public class AutomateWindow extends WindowOpener implements Button.ClickListener
 
 	private Embedded createEmbeededChart(MultiAcqPanel pan) {
 		p("create createEmbeededChart called");
-		JFreeChart chart = pan.getChart();
-		if (chart == null) {
+		singlechart = pan.getChart();
+		if (singlechart == null) {
 			p("Could not create JFreeChart object");
 			return null;
 		}
-		JFreeChartWrapper wrapper = new JFreeChartWrapper(chart);
+		JFreeChartWrapper wrapper = new JFreeChartWrapper(singlechart);
 		wrapper.setWidth("550px");
 		wrapper.setHeight("320px");
 		if (wrapper == null) {

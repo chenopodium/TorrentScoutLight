@@ -2,3 +2,6 @@
 ./torrentscout.war /var/lib/tomcat6/webapps/
 ./internal.war /var/lib/tomcat6/webapps/
 ./torrentscout /results/plugins
+./LogServlet.war /var/lib/tomcat6/webapps/
+./tslworkers.properties /etc/apache2
+./jk.load /etc/apache2/mods-enabled/

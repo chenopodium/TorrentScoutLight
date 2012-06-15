@@ -11,9 +11,12 @@ public class RangeDialog extends Window {
     Recipient r; 
     TextField tmin;
     TextField tmax ;
-
-    public RangeDialog(final Window parent, String title, String question, double min, double max, Recipient recipient) {
+    Window parent;
+    public RangeDialog(final Window par, String title, String question, double min, double max, Recipient recipient) {
         r = recipient;
+        
+        if (par.getParent() != null) parent = par.getParent();
+        else parent = par;
         tmin = new TextField();
         tmax = new TextField();
         setCaption(title);
@@ -31,6 +34,7 @@ public class RangeDialog extends Window {
         h.addComponent(tmax);
         addComponent(h);
         final Window dialog = this;
+        dialog.focus();
         dialog.setWidth("400px");
         addComponent(new Button("Ok", new Button.ClickListener() {
             public void buttonClick(ClickEvent event) {

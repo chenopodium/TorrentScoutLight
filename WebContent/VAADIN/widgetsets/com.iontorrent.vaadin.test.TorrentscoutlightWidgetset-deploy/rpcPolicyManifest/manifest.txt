@@ -1,0 +1,3 @@
+# Module com.iontorrent.vaadin.test.TorrentscoutlightWidgetset
+# RPC service class, partial path of RPC policy file
+com.allen_sauer.gwt.log.client.RemoteLoggerService, 0E2AE422F0EED097737052A53F3D79E2.gwt.rpc

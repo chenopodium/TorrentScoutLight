@@ -44,7 +44,8 @@ import com.vaadin.ui.Window;
  * 
  * @author Chantal Roth chantal.roth@lifetech.com
  */
-public class GeneWindow extends WindowOpener implements Button.ClickListener, TaskListener, ProgressListener {
+public class GeneWindow extends WindowOpener implements Button.ClickListener,
+		TaskListener, ProgressListener {
 
 	private TSVaadin app;
 	Table table;
@@ -61,8 +62,11 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener, Ta
 	ArrayList<Read> reads;
 	String selectedref;
 	WorkThread t;
-	public GeneWindow(TSVaadin app, Window main, String description, int x, int y) {
-		super("Find reads by genome position", main, description, x, y, 950, 350);
+
+	public GeneWindow(TSVaadin app, Window main, String description, int x,
+			int y) {
+		super("Find reads by genome position", main, description, x, y, 950,
+				350);
 		this.app = app;
 
 		// super.openbutton.setEnabled(false);
@@ -72,12 +76,18 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener, Ta
 	public void openButtonClick(Button.ClickEvent event) {
 		this.exp = app.getExperimentContext();
 		if (exp == null) {
-			mainwindow.showNotification("No Experiment Selected", "<br/>Please open an experiment first", Window.Notification.TYPE_WARNING_MESSAGE);
+			appwindow.showNotification("No Experiment Selected",
+					"<br/>Please open an experiment first",
+					Window.Notification.TYPE_WARNING_MESSAGE);
 			return;
 		}
 		SequenceLoader loader = SequenceLoader.getSequenceLoader(this.exp);
 		if (!loader.getBamFile().exists()) {
-			app.showMessage("No BAM", "Can't find a BAM file:"+loader.getBamFile()+"<br>Please check your experiment files and folders.<br>");
+			app.showMessage(
+					"No BAM",
+					"Can't find a BAM file:"
+							+ loader.getBamFile()
+							+ "<br>Please check your experiment files and folders.<br>");
 			return;
 		}
 		super.openButtonClick(event);
@@ -94,13 +104,13 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener, Ta
 		sel.setDescription("Chromosome/Reference");
 		sel.setNullSelectionAllowed(false);
 		SequenceLoader loader = SequenceLoader.getSequenceLoader(this.exp);
-		
+
 		SamUtils sam = loader.getSamUtils();
 		boolean has = false;
 		if (sam != null) {
-			
+
 			ArrayList<String> refs = sam.getReferenceNames();
-	
+
 			for (String ref : refs) {
 				sel.addItem(ref);
 				if (!has) {
@@ -109,7 +119,7 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener, Ta
 				}
 			}
 		}
-		
+
 		sel.setImmediate(true);
 
 		txt = new TextField();
@@ -139,7 +149,7 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener, Ta
 		hor.addComponent(help);
 		help.addListener(new Button.ClickListener() {
 			public void buttonClick(Button.ClickEvent event) {
-				 app.showHelpMessage("Help", getHelpMessage());
+				app.showHelpMessage("Help", getHelpMessage());
 			}
 		});
 
@@ -154,8 +164,7 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener, Ta
 
 		});
 		hor.addComponent(export);
-		hor.addComponent(new Label(exp.getResultsDirectory()));
-		
+
 
 	}
 
@@ -186,10 +195,10 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener, Ta
 		table.addContainerProperty("flow", Integer.class, null);
 		table.addContainerProperty("pos in read", Integer.class, null);
 		table.addContainerProperty("pos in al", Integer.class, null);
-		table.addContainerProperty("base", String.class, null);		
+		table.addContainerProperty("base", String.class, null);
 		table.addContainerProperty("alignment info", String.class, null);
 		table.addContainerProperty("reference", String.class, null);
-		
+
 		table.addStyleName("welltable");
 
 		if (reads != null && reads.size() > 0) {
@@ -197,10 +206,10 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener, Ta
 			for (int row = 0; row < reads.size(); row++) {
 				addRow(row, reads.get(row));
 			}
-			
-			
+
 		} else {
-			app.showMessage("No reads", "I found no reads at " + selectedref + "/" + genomepos);
+			app.showMessage("No reads", "I found no reads at " + selectedref
+					+ "/" + genomepos);
 		}
 		// Allow selecting items from the table.
 		table.setSelectable(true);
@@ -208,7 +217,7 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener, Ta
 		// Send changes in selection immediately to server.
 		table.setImmediate(true);
 
-		if (sortids != null && reads != null && reads.size()>0) {
+		if (sortids != null && reads != null && reads.size() > 0) {
 			table.setSortContainerPropertyId(sortids);
 			table.sort();
 		}
@@ -221,14 +230,17 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener, Ta
 					return;
 				}
 				Item obj = table.getItem(id);
-				int x = ((Integer) obj.getItemProperty("x").getValue()).intValue();
-				int y = ((Integer) obj.getItemProperty("y").getValue()).intValue();
-				int flow = ((Integer) obj.getItemProperty("flow").getValue()).intValue();
+				int x = ((Integer) obj.getItemProperty("x").getValue())
+						.intValue();
+				int y = ((Integer) obj.getItemProperty("y").getValue())
+						.intValue();
+				int flow = ((Integer) obj.getItemProperty("flow").getValue())
+						.intValue();
 				WellCoordinate coord = new WellCoordinate(x, y);
 				exp.makeRelative(coord);
 				exp.setFlow(flow);
 				app.setWellCoordinate(coord, false);
-				//app.reopenAlign();
+				// app.reopenAlign();
 			}
 		});
 		mywindow.addComponent(table);
@@ -240,7 +252,7 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener, Ta
 			app.showMessage("No data", "Found no data in table to export");
 			return;
 		}
-		DataUtils.export(table, mainwindow);
+		DataUtils.export(table, mywindow);
 
 	}
 
@@ -262,7 +274,8 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener, Ta
 		genomepos = -1;
 		try {
 			genomepos = Long.parseLong(v);
-		} catch (Exception e) {}
+		} catch (Exception e) {
+		}
 		if (genomepos < 0) {
 			app.showError(this, "Could not determing position based on " + v);
 			return;
@@ -275,11 +288,13 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener, Ta
 		indicator = new ProgressIndicator(new Float(0.0));
 		indicator.setHeight("40px");
 
-		indicator.setDescription("Finding reads at genome position " + genomepos + "...");
+		indicator.setDescription("Finding reads at genome position "
+				+ genomepos + "...");
 		indicator.setPollingInterval(5000);
 		hor.addComponent(indicator);
-		app.showMessage("Finding reads", "Finding reads at position "+genomepos);
-		app.logModule(getName(), "find "+genomepos);
+		app.showMessage("Finding reads", "Finding reads at position "
+				+ genomepos);
+		app.logModule(getName(), "find " + genomepos);
 		t = new WorkThread(this);
 		t.execute();
 	}
@@ -292,13 +307,15 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener, Ta
 		addTable();
 
 	}
+
 	public void close() {
 		super.close();
 		if (t != null && !t.isCancelled()) {
 			t.cancel(true);
 			t = null;
-		}		
+		}
 	}
+
 	// Another thread to do some work
 	class WorkThread extends Task {
 		boolean has;
@@ -317,16 +334,19 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener, Ta
 		protected Void doInBackground() {
 			try {
 
-				app.showMessage("Searching...", "Finding reads at position " + genomepos);
+				app.showMessage("Searching...", "Finding reads at position "
+						+ genomepos);
 				// result
 				SequenceLoader loader = SequenceLoader.getSequenceLoader(exp);
 				indicator.setValue(new Float(0.05));
 				if (!loader.hasGenomeToReadIndex()) {
-					app.showLongMessage("Searching...", "Creating genome to read index");
+					app.showLongMessage("Searching...",
+							"Creating genome to read index");
 					loader.createGenomeToReadIndex();
 				}
 				indicator.setValue(new Float(0.5));
-				ArrayList<WellCoordinate> coords = loader.findWellCoords(genomepos);
+				ArrayList<WellCoordinate> coords = loader
+						.findWellCoords(genomepos);
 				p("FindCoords at " + genomepos + ":" + coords);
 				String error = loader.getMsg();
 				if (error != null) {
@@ -335,18 +355,20 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener, Ta
 				indicator.setValue(new Float(0.7));
 
 				WellSelection sel = new WellSelection(coords);
-				sel.setTitle("Reads at position "+genomepos);				
-				app.showMessage("Got result", "Loading info on " + coords.size() + " found wells...");
+				sel.setTitle("Reads at position " + genomepos);
+				app.showMessage("Got result",
+						"Loading info on " + coords.size() + " found wells...");
 				sel.loadDataForWells(exp.getWellContext().getMask());
 				app.setWellSelection(sel);
 				indicator.setValue(new Float(0.8));
-				p("Created well selection " + sel + " with " + coords.size() + "  coords");
+				p("Created well selection " + sel + " with " + coords.size()
+						+ "  coords");
 				p("Loading reads for coords");
 				reads = loader.getReadForCoords(coords);
 				indicator.setValue(new Float(0.9));
 				String ref = selectedref;
 				if (ref != null && ref.length() > 0) {
-					p("Filtering for ref name " + ref);					
+					p("Filtering for ref name " + ref);
 					ArrayList<Read> filtered = new ArrayList<Read>();
 					for (Read r : reads) {
 						String name = r.getReferenceName();
@@ -366,7 +388,8 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener, Ta
 				indicator.setValue(new Float(1.0));
 
 			} catch (Exception e) {
-				err("Got an error when computing the heat map: " + ErrorHandler.getString(e));
+				err("Got an error when computing the heat map: "
+						+ ErrorHandler.getString(e));
 			}
 			return null;
 
@@ -375,7 +398,8 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener, Ta
 	}
 
 	public void setProgressValue(int p) {
-		if (indicator != null) indicator.setValue(((double) p / 100.0d));
+		if (indicator != null)
+			indicator.setValue(((double) p / 100.0d));
 		// progress.setValue("Creating composite image: " + p + "%");
 	}
 
@@ -387,21 +411,22 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener, Ta
 		int flow = r.findFlow(basepos);
 		String base = "" + r.getBaseChar(basepos);
 		Alignment al = r.getAlign();
-		String info = "ident=" + dec.format(al.getIdentityPerc()) + "%, indels=" + al.getGaps() + ", mismatches=" + al.getMismatches();
+		String info = "ident=" + dec.format(al.getIdentityPerc())
+				+ "%, indels=" + al.getGaps() + ", mismatches="
+				+ al.getMismatches();
 
 		Object[] rowdata = new Object[8 + 2];
 		rowdata[0] = new Integer(x + exp.getColOffset());
 		rowdata[1] = new Integer(y + exp.getRowOffset());
 		rowdata[2] = new Boolean(r.isReverse());
 		rowdata[3] = new Integer(r.getLength());
-		
+
 		rowdata[4] = new Integer(flow);
 		rowdata[5] = new Integer(basepos);
 		rowdata[6] = new Integer(alpos);
 		rowdata[7] = base;
 		rowdata[8] = info;
 		rowdata[9] = r.getReferenceName();
-		
 
 		table.addItem(rowdata, new Integer(row));
 
@@ -418,7 +443,8 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener, Ta
 	}
 
 	private static void err(String msg, Exception ex) {
-		Logger.getLogger(GeneWindow.class.getName()).log(Level.SEVERE, msg + ErrorHandler.getString(ex));
+		Logger.getLogger(GeneWindow.class.getName()).log(Level.SEVERE,
+				msg + ErrorHandler.getString(ex));
 	}
 
 	private static void err(String msg) {
@@ -430,7 +456,7 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener, Ta
 	}
 
 	private static void p(String msg) {
-		//system.out.println("GeneWindow: " + msg);
+		// system.out.println("GeneWindow: " + msg);
 		Logger.getLogger(GeneWindow.class.getName()).log(Level.INFO, msg);
 	}
 

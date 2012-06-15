@@ -5,6 +5,7 @@
 package com.iontorrent.vaadin.fit;
 
 import java.awt.Color;
+import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.logging.Level;
@@ -13,7 +14,10 @@ import java.util.logging.Logger;
 import com.iontorrent.expmodel.ExperimentContext;
 import com.iontorrent.guiutils.widgets.CoordWidget;
 import com.iontorrent.guiutils.widgets.Widget;
+import com.iontorrent.heatmaps.ScoreMaskGenerator;
 import com.iontorrent.rawdataaccess.wells.BitMask;
+import com.iontorrent.rawdataaccess.wells.ScoreMaskFlag;
+import com.iontorrent.results.scores.ScoreMask;
 import com.iontorrent.torrentscout.explorer.ExplorerContext;
 import com.iontorrent.torrentscout.explorer.fit.AbstractHistoFunction;
 import com.iontorrent.torrentscout.explorer.fit.FitFunctionsFactory;
@@ -84,7 +88,7 @@ public class FitWindowCanvas extends WindowOpener {
 	@Override
 	public void openButtonClick(Button.ClickEvent event) {
 		if (app.getExperimentContext() == null) {
-			mainwindow.showNotification("No Experiment Selected", "<br/>Please open an experiment first", Window.Notification.TYPE_WARNING_MESSAGE);
+			appwindow.showNotification("No Experiment Selected", "<br/>Please open an experiment first", Window.Notification.TYPE_WARNING_MESSAGE);
 			return;
 		}
 		exp = app.getExperimentContext();
@@ -92,7 +96,7 @@ public class FitWindowCanvas extends WindowOpener {
 		RasterData data = maincont.getData();
 
 		if (data == null) {
-			mainwindow.showNotification("No Data Loaded", "<br/>Opening the Process component first", Window.Notification.TYPE_WARNING_MESSAGE);
+			appwindow.showNotification("No Data Loaded", "<br/>Opening the Process component first", Window.Notification.TYPE_WARNING_MESSAGE);
 			app.reopenProcess(true);
 			// return;
 		}
@@ -247,8 +251,10 @@ public class FitWindowCanvas extends WindowOpener {
 		}
 		p("left: " + minx + ", right: " + maxx);
 
+		// ask what KIND of mask, a bit mask, or a score mask - or just add both?
 		
-		InputDialog input = new InputDialog(mainwindow, "Name of new mask: ", new Recipient() {
+		
+		InputDialog input = new InputDialog(mywindow, "Name of new mask: ", new Recipient() {
 
 			@Override
 			public void gotInput(String name) {
@@ -257,10 +263,24 @@ public class FitWindowCanvas extends WindowOpener {
 				}
 				p("Created mask with name: " + name);
 				BitMask mask = curfunction.createMask(maincont.getHistoMask(), minx, maxx);
+				// also add score mask
+				ScoreMask scoremask = app.getScoreMask();
+				ScoreMaskGenerator gen = new ScoreMaskGenerator(scoremask, exp);
+				ScoreMaskFlag flag = ScoreMaskFlag.CUSTOM1;
+				flag.setFilename(null);
+				flag.setName(name +"(with values)");
+				flag.setDescription("Result from fit "+curfunction.getName()+", with values");
+				double[][] res = curfunction.createValueMask(maincont.getHistoMask(), minx, maxx);
+				try {
+					gen.createCustomMask(flag, res);
+				} catch (IOException e) {
+					err("Could not create custom mask for "+flag);
+				}
 				mask.setName(name);
 				app.logModule(FitWindowCanvas.this.getName(), "create mask "+name);
 				DecimalFormat f = new DecimalFormat("#.###");
-				String msg = "<html>Created mask <b>" + mask.getName() + "</b> with " + mask.computePercentage() + "% wells<br>using interval " + f.format(minx) + " - " + f.format(maxx) + "<br>and ";
+				String msg = "<html>Created TWO masks <b>" + mask.getName() + "</b> with " + mask.computePercentage() + "% wells<br>using interval " + f.format(minx) + " - " + f.format(maxx) + 
+						"<br>and a mask with VALUES to be used in the XYZ chart<br> ";
 				if (maincont.getHistoMask() != null) {
 					msg += " using wells <b>only from mask " + maincont.getHistoMask() + "</b>";
 				} else {
@@ -317,11 +337,6 @@ public class FitWindowCanvas extends WindowOpener {
 		zoom = false;
 		addToHist = false;
 		add.setValue(addToHist);
-		String relative = imageresource.getApplication().getRelativeLocation(imageresource);
-		String appurl = imageresource.getApplication().getURL().toString();
-		String url = relative;
-		url = appurl + url.replace("app://", "");
-		p("URl from stream resource sub: " + url);
 		// app.getMainWindow().open(imageresource, "_blank");
 		canvashist = new Canvas();
 		// canvashist.setImmediate(true);
@@ -329,7 +344,7 @@ public class FitWindowCanvas extends WindowOpener {
 		canvashist.setWidth("800px");
 		canvashist.setHeight("400px");
 
-		String bg = url;
+		String bg =  app.getBgUrl(imageresource.getApplication().getRelativeLocation(imageresource));
 		canvashist.setBackgroundImage(bg);
 		v.addComponent(canvashist);
 

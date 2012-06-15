@@ -8,11 +8,14 @@ import com.vaadin.ui.Window;
 public class DoubleInputDialog extends Window {
     Recipient r;
     TextField tf = new TextField();
-
+    Window parent;
+    
     public DoubleInputDialog(final Window parent, String question, Recipient recipient) {
     	this(parent, question, recipient, null);
     }
-    public DoubleInputDialog(final Window parent, String question, Recipient recipient, String name) {
+    public DoubleInputDialog(final Window par, String question, Recipient recipient, String name) {
+    	if (par.getParent() != null) parent = par.getParent();
+        else parent = par;
         r = recipient;
         setCaption(question);
         setModal(true);

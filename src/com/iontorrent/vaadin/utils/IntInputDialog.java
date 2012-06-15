@@ -9,15 +9,18 @@ import com.vaadin.ui.Window;
 public class IntInputDialog extends Window {
     Recipient r;
     TextField tf = new TextField();
-
+    Window parent;
+    
     public IntInputDialog(final Window parent, String question, Recipient recipient) {
     	this(parent, question, null, recipient, null, 0);
     }
     public IntInputDialog(final Window parent, String title, String question, Recipient recipient, String name) {
     	this(parent, title, question, recipient, name, 0);
     }
-    public IntInputDialog(final Window parent, String title, String question, Recipient recipient, String name, int width) {
+    public IntInputDialog(final Window par, String title, String question, Recipient recipient, String name, int width) {
         r = recipient;
+        if (par.getParent() != null) parent = par.getParent();
+        else parent = par;
         setCaption(title);
         setModal(true);
         if (width <= 0) getLayout().setSizeUndefined();
@@ -28,7 +31,9 @@ public class IntInputDialog extends Window {
         }
         addComponent(tf);
         
+        
         final Window dialog = this;
+        dialog.focus();
         addComponent(new Button("Ok", new Button.ClickListener() {
             public void buttonClick(ClickEvent event) {
             	int val = 0;

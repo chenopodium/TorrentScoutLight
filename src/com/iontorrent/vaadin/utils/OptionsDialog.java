@@ -11,6 +11,7 @@ import com.vaadin.ui.Window;
 public class OptionsDialog extends Window {
     Recipient r; 
     Label[] lbls;
+    Window parent;
     
     public OptionsDialog(final Window parent, String title, String question,  String a, String b, Recipient recipient) {
     	this(parent, title,question, new String[] {a, b}, 0, recipient);
@@ -21,8 +22,10 @@ public class OptionsDialog extends Window {
     public OptionsDialog(final Window parent, String title,  String question, String a, String b, String c, String d,   Recipient recipient) {
     	this(parent, title,question, new String[] {a, b, c, d}, 0, recipient);
     }
-    public OptionsDialog(final Window parent, String title, String question, final String[] options, int selected, Recipient recipient) {
+    public OptionsDialog(Window par, String title, String question, final String[] options, int selected, Recipient recipient) {
         r = recipient;
+        if (par.getParent() != null) parent = par.getParent();
+        else parent = par;
         final OptionGroup group = new OptionGroup("");
         final int nr = options.length;
         lbls = new Label[nr];
@@ -31,6 +34,7 @@ public class OptionsDialog extends Window {
         }
         setCaption(title);
         setModal(true);
+        
         getLayout().setSizeUndefined();
         
         addComponent(new Label(question));
@@ -40,6 +44,7 @@ public class OptionsDialog extends Window {
         if (selected >-1 && selected <nr) group.setItemEnabled(options[selected], true);
         final Window dialog = this;
         dialog.setWidth("400px");
+        dialog.focus();
         addComponent(new Button("Ok", new Button.ClickListener() {
             public void buttonClick(ClickEvent event) {
             	String id = null;

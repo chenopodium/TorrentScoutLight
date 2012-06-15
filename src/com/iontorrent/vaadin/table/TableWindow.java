@@ -83,14 +83,14 @@ public class TableWindow extends WindowOpener implements Button.ClickListener, T
     public void openButtonClick(Button.ClickEvent event) {
     	 this.exp = app.getExperimentContext();
         if (exp == null) {
-            mainwindow.showNotification("No Experiment Selected",
+            appwindow.showNotification("No Experiment Selected",
                     "<br/>Please open an experiment first",
                     Window.Notification.TYPE_WARNING_MESSAGE);
             return;
         }
         if (exp.getWellContext().getMask() == null) {
-            mainwindow.showNotification("Found no bfmask.bin",
-                    "<br/>Could not find " + app.getExperimentContext().getResultsDirectory() + "bfmask.bin",
+            appwindow.showNotification("Found no bfmask.bin",
+                    "<br/>Could not find " + app.getExperimentContext().getBfMaskFile(),
                     Window.Notification.TYPE_WARNING_MESSAGE);
             return;
         }
@@ -151,7 +151,7 @@ public class TableWindow extends WindowOpener implements Button.ClickListener, T
         
         WellSelection sel = cont.getSelection();
         // fix: if too many, still use data from well selection, just not all results!
-        if (sel != null && sel.getAllWells() != null && sel.getAllWells().size()>1) {
+        if (sel != null && sel.getAllWells() != null && sel.getAllWells().size()>0) {
         	// use the selection insead
         	int row = 0;
         	p("using well selection");
@@ -279,7 +279,7 @@ public class TableWindow extends WindowOpener implements Button.ClickListener, T
     		return;
     	}
     	app.logModule(getName(), "export table");
-    	DataUtils.export(table, mainwindow);
+    	DataUtils.export(table, mywindow);
     	    	
     }
     public String getHelpMessage() {

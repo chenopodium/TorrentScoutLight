@@ -52,18 +52,16 @@ public class AlignWindow extends WindowOpener implements ProgressListener, TaskL
 	@Override
 	public void openButtonClick(Button.ClickEvent event) {
 		if (app.getExperimentContext() == null) {
-			mainwindow.showNotification("No Experiment Selected", "<br/>Please open an experiment first", Window.Notification.TYPE_WARNING_MESSAGE);
+			appwindow.showNotification("No Experiment Selected", "<br/>Please open an experiment first", Window.Notification.TYPE_WARNING_MESSAGE);
 			return;
 		}
 		exp = app.getExperimentContext();
-		File f = new File(exp.getResultsDirectory() + exp.getBamFileName());
-		if (!f.exists()) {
-			mainwindow.showNotification("Bam File not found", "<br/>Could not find the file " + f, Window.Notification.TYPE_WARNING_MESSAGE);
+		if (!exp.hasBam()) {
+			appwindow.showNotification("Bam File not found", "<br/>Could not find the file " + exp.getBamFilePath(), Window.Notification.TYPE_WARNING_MESSAGE);
 			return;
 		}
-		f = new File(exp.getResultsDirectory() + exp.getSffFileName());
-		if (!f.exists()) {
-			mainwindow.showNotification("Bam File not found", "<br/>Could not find the file " + f, Window.Notification.TYPE_WARNING_MESSAGE);
+		if (!exp.hasSff()) {
+			appwindow.showNotification("Sff File not found", "<br/>Could not find the file " + exp.getSffFilePath(), Window.Notification.TYPE_WARNING_MESSAGE);
 			return;
 		}
 		app.openTable();

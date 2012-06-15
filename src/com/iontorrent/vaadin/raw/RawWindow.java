@@ -4,15 +4,23 @@
  */
 package com.iontorrent.vaadin.raw;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import org.jfree.chart.ChartUtilities;
+import org.jfree.chart.JFreeChart;
 
 import com.iontorrent.expmodel.ExperimentContext;
 import com.iontorrent.rawdataaccess.pgmacquisition.RawType;
 import com.iontorrent.utils.StringTools;
 import com.iontorrent.vaadin.TSVaadin;
 import com.iontorrent.vaadin.utils.CoordSelect;
+import com.iontorrent.vaadin.utils.ExportTool;
+import com.iontorrent.vaadin.utils.FileDownloadResource;
+import com.iontorrent.vaadin.utils.OptionsDialog;
 import com.iontorrent.vaadin.utils.WindowOpener;
 import com.iontorrent.wellmodel.WellContext;
 import com.iontorrent.wellmodel.WellCoordinate;
@@ -21,18 +29,21 @@ import com.vaadin.data.Property.ConversionException;
 import com.vaadin.data.Property.ReadOnlyException;
 import com.vaadin.data.Property.ValueChangeEvent;
 import com.vaadin.data.Property.ValueChangeListener;
+import com.vaadin.terminal.ThemeResource;
 import com.vaadin.ui.AbstractLayout;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.CheckBox;
 import com.vaadin.ui.Embedded;
 import com.vaadin.ui.HorizontalLayout;
 import com.vaadin.ui.Label;
+import com.vaadin.ui.NativeButton;
 import com.vaadin.ui.Select;
 import com.vaadin.ui.TabSheet;
 import com.vaadin.ui.TextArea;
 import com.vaadin.ui.TextField;
 import com.vaadin.ui.VerticalLayout;
 import com.vaadin.ui.Window;
+import com.vaadin.ui.Button.ClickEvent;
 
 /**
  *
@@ -43,6 +54,9 @@ public class RawWindow extends WindowOpener implements Button.ClickListener, Pro
 
     private TSVaadin app;
     private Embedded chart;
+    VerticalLayout optionsTab;
+    VerticalLayout dataTab ;
+    HorizontalLayout tophor;
     private WellContext context;
     private ExperimentContext exp;
     private CoordSelect coordsel;
@@ -63,6 +77,7 @@ public class RawWindow extends WindowOpener implements Button.ClickListener, Pro
     private CheckBox boxbg ;
     
     private TextField textsubtract;
+    private  TextField tspan;
 
     public RawWindow(TSVaadin app, Window main, String description, int x, int y) {
         super("Raw Signal (one well)", main, description, x, y, 470, 450);
@@ -87,11 +102,11 @@ public class RawWindow extends WindowOpener implements Button.ClickListener, Pro
         //  chartTab.addComponent(new Label("Chart"));
         tabsheet.addTab(chartTab);
         tabsheet.getTab(chartTab).setCaption("Chart");
-        VerticalLayout optionsTab = new VerticalLayout();
+        optionsTab = new VerticalLayout();
         tabsheet.addTab(optionsTab);
         tabsheet.getTab(optionsTab).setCaption("Options");
 
-        VerticalLayout dataTab = new VerticalLayout();
+        dataTab = new VerticalLayout();
         tabsheet.addTab(dataTab);
         tabsheet.getTab(dataTab).setCaption("Data");
 
@@ -103,14 +118,121 @@ public class RawWindow extends WindowOpener implements Button.ClickListener, Pro
         tabsheet.addTab(debugTab);
         tabsheet.getTab(debugTab).setCaption("Debug");
         
-        mywindow.addComponent(tabsheet);
+        
+        
+        VerticalLayout vzoom = new VerticalLayout();
+		NativeButton help = new NativeButton();
+		help.setStyleName("nopadding");
+		help.setDescription("Click me to get information on this window");
+		help.setIcon(new ThemeResource("img/help-hint.png"));
+		
+		help.addListener(new Button.ClickListener() {
+			public void buttonClick(Button.ClickEvent event) {
+				app.showHelpMessage("Help", getHelpMessage());
+			}
+		});
+		
+		final NativeButton options = new NativeButton();
+		options.setStyleName("nopadding");
+		options.setIcon(new ThemeResource("img/configure-3.png"));
+		options.setDescription("Options (such as file type or if a flow should be subtracted)");
+		options.addListener(new Button.ClickListener() {
+			@Override
+			public void buttonClick(ClickEvent event) {
+				doOptionAction();
+			}
+
+		});
+
+		final NativeButton export = new NativeButton();
+		export.setStyleName("nopadding");
+		export.setIcon(new ThemeResource("img/export.png"));
+		export.setDescription("Open image in another browser window so that you can save it to file");
+		export.addListener(new Button.ClickListener() {
+			@Override
+			public void buttonClick(com.vaadin.ui.Button.ClickEvent event) {
+				doExportAction();
+			}
+		});
+
+		 tophor = new HorizontalLayout();
+		HorizontalLayout hcan = new HorizontalLayout();
+		vzoom.addComponent(export);
+		vzoom.addComponent(options);
+		vzoom.addComponent(help);			
+		hcan.addComponent(vzoom);
+		mywindow.addComponent(tophor);    
+		mywindow.addComponent(hcan);        
+        hcan.addComponent(tabsheet);
+        
         addOptions(optionsTab);
         addChart(chartTab);
         addData(dataTab);
         addTrans(transTab);
         addDebugTab(debugTab);
     }
+	public void doExportAction() {
+		String options[] =  { 
+				"... save chart image",
+				"... save data points", 				
+				"... raw data, ionograms, alignments for signal mask wells"};
+		
+		OptionsDialog input = new OptionsDialog(mywindow,
+				"What would you like to export?", "Export...",options,0,			
+				new OptionsDialog.Recipient() {
 
+					@Override
+					public void gotInput(final int selection) {
+						if (selection < 0)
+							return;
+						// / do the search
+						if (selection == 0) {
+							saveCharts();
+						} else if (selection == 1) {
+							tabsheet.setSelectedTab(dataTab);					
+						} else {
+							ExportTool export = new ExportTool(app, mywindow,
+									null, tophor);
+							export.doExportAction();
+
+						}
+					}
+
+				});
+	}
+	public void saveCharts() {
+		File f = null;
+		if (raw == null || raw.getFreeChart() == null) return;
+		String what = "automate";
+		//for (int i = 0; i < 1; i++) {
+			try {
+				f = File.createTempFile("export_"+what+"_" + exp.getId() + exp.getWellContext().getAbsoluteCoordinate().getCol() 
+						+ "_"+ exp.getWellContext().getAbsoluteCoordinate().getRow(), ".png");
+			} catch (IOException e) {
+	
+			}
+			if (f != null) {
+				f.deleteOnExit();
+			//f (i == 0) this.exportPng(f, singlechart);
+				exportPng(f, raw.getFreeChart());
+				FileDownloadResource down = new FileDownloadResource(f, this.app);
+				app.getMainWindow().open(down, "_blank", 600, 600, 1);
+			}
+		//}
+	
+	}
+	private void exportPng(File f, JFreeChart chart) {
+		// Draw png to bytestream
+		try {
+			ChartUtilities.saveChartAsPNG(f, chart, 600, 400, null);
+		} catch (IOException e) {
+			err("Could not save chart");
+			app.showError("Save Chart", "Could not save chart to " + f);
+		}
+	}
+    public void doOptionAction() {
+		tabsheet.setSelectedTab(this.optionsTab);
+	}
     public void addTrans(AbstractLayout tab) {
         TransOptions t = new TransOptions();
         t.createGui(tab);
@@ -213,12 +335,15 @@ public class RawWindow extends WindowOpener implements Button.ClickListener, Pro
         });
        lab = new Label("<b>Data operations</b>", Label.CONTENT_XHTML);  
        //lab.setStyleName("bold");
-       VerticalLayout v = new VerticalLayout();
+      
+       tab.addComponent(new Label(" "));
        tab.addComponent(lab);
+       HorizontalLayout v = new HorizontalLayout();
        tab.addComponent(v);
         
         Label sl = new Label("Subtract result of flow:");
         textsubtract = new TextField();
+        textsubtract.setWidth("70px");
         if (subtract >-1) {
             textsubtract.setValue(subtract);
         }
@@ -268,7 +393,7 @@ public class RawWindow extends WindowOpener implements Button.ClickListener, Pro
         }
         israw = boxraw.booleanValue();
         isbg = boxbg.booleanValue();
-        raw = new RawChart(getSelectedType(), app.getExperimentContext(), parseFlow(), isbg, israw, getInt(textsubtract,-1));
+        raw = new RawChart(getSelectedType(), app.getExperimentContext(), app.getExplorerContext(), parseFlow(), isbg, israw, getInt(textsubtract,-1));
         chart = raw.createChart();
         if (chart != null) {
             tab.addComponent(chart);
@@ -298,12 +423,7 @@ public class RawWindow extends WindowOpener implements Button.ClickListener, Pro
 
     @Override
     public void openButtonClick(Button.ClickEvent event) {
-        if (app.getExperimentContext() == null) {
-            mainwindow.showNotification("No Experiment Selected",
-                    "<br/>Please open an experiment first",
-                    Window.Notification.TYPE_WARNING_MESSAGE);
-            return;
-        }
+    	if (!super.checkExperimentOpened()) return;
         super.openButtonClick(event);
     }
 
@@ -312,6 +432,26 @@ public class RawWindow extends WindowOpener implements Button.ClickListener, Pro
         tab.addComponent(h);
         addTypeSelection(h);
         addCurveSelectionOptions(tab);
+        
+        h = new HorizontalLayout();
+        Label sl = new Label("Span size for NN:");
+        tspan = new TextField();
+        tspan.setWidth("70px");
+        tspan.setImmediate(true);
+        tspan.setValue(app.getExplorerContext().getSpan());
+        tspan.setDescription("Change span size for nn subtraction - hit enter after you change it");
+        h.addComponent(sl);
+        h.addComponent(tspan);
+        tspan.addListener(new Property.ValueChangeListener() {
+
+            public void valueChange(ValueChangeEvent event) {
+                //addChart(chartTab);
+                int span = Math.max(4, getInt(tspan, 8));
+                app.getExplorerContext().setSpan(span);
+                reopen();
+            }
+        });
+        tab.addComponent(h);
     }
 
     public void buttonClick(Button.ClickEvent event) {

@@ -185,7 +185,7 @@ public class FileBrowserWindow extends WindowOpener {
 						p("Ok");
 						if (mode == SAVE && (f.exists() && (justcreated == null || !f.equals(justcreated)))) {
 							
-							OkDialog okdialog = new OkDialog(mainwindow, "Overwrite?", "The file "+f+" already exists. Overwrite it?", new OkDialog.Recipient() {
+							OkDialog okdialog = new OkDialog(appwindow, "Overwrite?", "The file "+f+" already exists. Overwrite it?", new OkDialog.Recipient() {
 								@Override
 								public void gotInput(String name) {
 									if (!name.equalsIgnoreCase("OK")) return;
@@ -235,7 +235,7 @@ public class FileBrowserWindow extends WindowOpener {
 						String ext = exts[0].trim();						
 						name = name +ext;					
 					}
-					InputDialog input = new InputDialog(mainwindow, "Name of file new file: ", new InputDialog.Recipient() {
+					InputDialog input = new InputDialog(appwindow, "Name of file new file: ", new InputDialog.Recipient() {
 						@Override
 						public void gotInput(String name) {
 							if (name == null || name.length() < 1) {
@@ -503,7 +503,7 @@ public class FileBrowserWindow extends WindowOpener {
 			showMessage("No data", "Found no data in table to export");
 			return;
 		}
-		DataUtils.export(table, mainwindow);
+		DataUtils.export(table, appwindow);
 
 	}
 
@@ -626,7 +626,7 @@ public class FileBrowserWindow extends WindowOpener {
 		p(msg);
 		Notification not = new Notification(title, "<br>" + msg, Window.Notification.TYPE_HUMANIZED_MESSAGE);
 		not.setDelayMsec(5000);
-		mainwindow.showNotification(not);
+		appwindow.showNotification(not);
 	}
 
 	public void showTopMessage(String title, String msg) {
@@ -638,29 +638,29 @@ public class FileBrowserWindow extends WindowOpener {
 		Notification n = new Notification(title, "<br>" + msg, Window.Notification.TYPE_HUMANIZED_MESSAGE);
 		n.setPosition(Window.Notification.POSITION_TOP_LEFT);
 
-		mainwindow.showNotification(n);
+		appwindow.showNotification(n);
 	}
 
 	public void showTopRightMessage(String title, String msg) {
 		p(msg);
 		Notification n = new Notification(title, "<br>" + msg, Window.Notification.TYPE_HUMANIZED_MESSAGE);
 		n.setPosition(Window.Notification.POSITION_TOP_RIGHT);
-		mainwindow.showNotification(n);
+		appwindow.showNotification(n);
 	}
 
 	public void showError(WindowOpener win, String msg) {
 		p(msg);
-		mainwindow.showNotification(win.getName(), "<br>" + msg, Window.Notification.TYPE_ERROR_MESSAGE);
+		appwindow.showNotification(win.getName(), "<br>" + msg, Window.Notification.TYPE_ERROR_MESSAGE);
 	}
 
 	public void showMessage(WindowOpener win, String msg) {
 		p(msg);
-		mainwindow.showNotification(win.getName(), "<br>" + msg, Window.Notification.TYPE_HUMANIZED_MESSAGE);
+		appwindow.showNotification(win.getName(), "<br>" + msg, Window.Notification.TYPE_HUMANIZED_MESSAGE);
 	}
 
 	public void showMessage(String title, String msg) {
 		p(msg);
 		
-		mainwindow.showNotification(title, "<br>" + msg, Window.Notification.TYPE_HUMANIZED_MESSAGE);
+		appwindow.showNotification(title, "<br>" + msg, Window.Notification.TYPE_HUMANIZED_MESSAGE);
 	}
 }

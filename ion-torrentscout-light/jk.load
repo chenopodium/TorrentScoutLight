@@ -1,0 +1,5 @@
+LoadModule jk_module /usr/lib/apache2/modules/mod_jk.so
+JkWorkersFile   /etc/apache2/tslworkers.properties
+JkLogStampFormat "[%a %b %d %H:%M:%S %Y] "
+JkLogFile       /var/log/apache2/mod_jk.log
+JkLogLevel      error

@@ -7,10 +7,12 @@ package com.iontorrent.vaadin.utils;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.vaadin.terminal.ThemeResource;
 import com.vaadin.ui.AbstractComponentContainer;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.Button.ClickEvent;
 import com.vaadin.ui.HorizontalLayout;
+import com.vaadin.ui.NativeButton;
 
 /**
  * 
@@ -39,14 +41,21 @@ public class ZoomControl {
 		return bucket;
 	}
 
-	public void addGuiElements(AbstractComponentContainer comp) {
-		HorizontalLayout h = new HorizontalLayout();
-		comp.addComponent(h);
-		pplus = new Button("++");
+	public void addGuiElements(AbstractComponentContainer h) {
+	//	HorizontalLayout h = new HorizontalLayout();
+		//comp.addComponent(h);
+		//String W = "28px";
+		pplus = new NativeButton();
+		pplus.setStyleName("nopadding");
+		pplus.setIcon(new ThemeResource("img/zoom-inin.png"));
 		pplus.setImmediate(true);
+	//	pplus.setWidth(W);
 		h.addComponent(pplus);
 		pplus.setDescription("Zoom in quickly (multiple steps)");
-		plus = new Button("+");
+		plus = new NativeButton();
+		plus.setStyleName("nopadding");
+	//	plus.setWidth(W);
+		plus.setIcon(new ThemeResource("img/zoom-in.png"));
 		plus.setImmediate(true);
 		h.addComponent(plus);
 
@@ -84,8 +93,11 @@ public class ZoomControl {
 		if (bucket <=1) plus.setDescription("Maximum zoom level reached");
 		else
 			plus.setDescription("Click to zoom in further");
-		minus = new Button("-");
+		minus = new NativeButton();
+		minus.setStyleName("nopadding");
+		minus.setIcon(new ThemeResource("img/zoom-out.png"));
 		minus.setImmediate(true);
+		//minus.setWidth(W);
 		minus.setDescription("Click to zoom out");
 		h.addComponent(minus);
 
@@ -100,7 +112,10 @@ public class ZoomControl {
 			}
 		});
 		
-		mminus = new Button("--");
+		mminus = new NativeButton();
+		mminus.setStyleName("nopadding");
+	//	mminus.setWidth(W);
+		mminus.setIcon(new ThemeResource("img/zoom-outout.png"));
 		mminus.setImmediate(true);
 		mminus.setDescription("Click to zoom out in multiple steps");
 		h.addComponent(mminus);
