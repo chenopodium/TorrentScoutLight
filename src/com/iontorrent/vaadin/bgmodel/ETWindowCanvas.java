@@ -382,7 +382,7 @@ public class ETWindowCanvas extends WindowOpener implements
 		}
 		if (hasflows && !gotall) {
 
-			app.showMessage("Loading..", "Loading empty traces file... ");
+			//app.showMessage("Loading..", "Loading empty traces file... ");
 			t = new WorkThread(this, flows);
 			indicator = new ProgressIndicator(new Float(0.0));
 			indicator.setHeight("40px");
@@ -542,8 +542,8 @@ public class ETWindowCanvas extends WindowOpener implements
 		protected Void doInBackground() {
 			try {
 
-				app.showMessage("Loading...",
-						"Loading empty traces file for flows " + flows);
+//				app.showMessage("Loading...",
+//						"Loading empty traces file for flows " + flows);
 				// result
 
 				for (int flow : flows) {

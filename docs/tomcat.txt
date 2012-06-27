@@ -1,0 +1,7 @@
+Tomcat java memory:L
+
+catalina.sh
+JAVA_OPTS="-server -Djava.awt.headless=true -Xms2048m -Xmx4096m -XX:MaxPermSize=512M -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled"
+
+rnd1.ite: 10.25.3.11
+corvette: 10.25.3.124

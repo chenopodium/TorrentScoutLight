@@ -131,10 +131,11 @@ public class ScoreMaskWindowCanvas extends WindowOpener implements
 		}
 
 		if (!exp.hasBam()) {
+			// try to find other bam?
 			appwindow.showNotification("Bam File not found",
 					"<br/>Could not find the file " + exp.getBamFilePath(),
 					Window.Notification.TYPE_WARNING_MESSAGE);
-			return;
+			
 		}
 		if (!exp.hasSff()) {
 			appwindow.showNotification("Sff File not found",
@@ -145,6 +146,9 @@ public class ScoreMaskWindowCanvas extends WindowOpener implements
 		super.openButtonClick(event);
 	}
 
+	public void setFlag(ScoreMaskFlag flag) {
+		this.flag = flag;
+	}
 	@Override
 	public void windowOpened(final Window mywindow) {
 		p("Creating bfmask image");
@@ -490,18 +494,10 @@ public class ScoreMaskWindowCanvas extends WindowOpener implements
 					@Override
 					public void fileSelected(File file) {
 						p("Got file:" + file);
-						if (file != null && file.isFile() && file.exists()) {
-							flag.setFilename(file.toString());
-							mask = app.getScoreMask();
-							mask.readData(flag);
-							app.showMessage("Open",
-									"Data loaded for " + flag.getName());
-							bfmask = null;
-							reopen();
-						} else
-							app.showMessage("Not Opened",
-									"Could not load file " + file);
+						loadResult(file);
 					}
+
+					
 
 					public boolean allowInList(File f, boolean toSave) {
 						if (f == null)
@@ -518,7 +514,20 @@ public class ScoreMaskWindowCanvas extends WindowOpener implements
 		browser.open();
 
 	}
-
+	public void loadResult(File file) {
+		if (file != null && file.isFile() && file.exists()) {
+			if (flag == null) flag = this.ALIGN_FLAG;;
+			flag.setFilename(file.toString());
+			mask = app.getScoreMask();
+			mask.readData(flag);
+			app.showMessage("Open",
+					"Data loaded for " + flag.getName());
+			bfmask = null;
+			reopen();
+		} else
+			app.showMessage("Not Opened",
+					"Could not load file " + file);
+	}
 	private void saveFile(boolean ask) {
 		mask = app.getScoreMask();
 

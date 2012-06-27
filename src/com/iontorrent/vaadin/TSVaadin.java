@@ -25,8 +25,10 @@ import com.iontorrent.expmodel.CompositeExperiment;
 import com.iontorrent.expmodel.DatBlock;
 import com.iontorrent.expmodel.ExperimentContext;
 import com.iontorrent.results.scores.ScoreMask;
+import com.iontorrent.sff.SffRead;
 import com.iontorrent.torentscout.explorer.cube.DataCubeLoader;
 import com.iontorrent.torrentscout.explorer.ExplorerContext;
+import com.iontorrent.utils.StringTools;
 import com.iontorrent.utils.SystemTool;
 import com.iontorrent.utils.io.FileTools;
 import com.iontorrent.vaadin.align.AlignWindow;
@@ -48,6 +50,7 @@ import com.iontorrent.vaadin.utils.PerformanceMonitor;
 import com.iontorrent.vaadin.utils.WindowOpener;
 import com.iontorrent.vaadin.wholechip.WholeChipWindowCanvas;
 import com.iontorrent.vaadin.xy.XYWindow;
+import com.iontorrent.wellmodel.WellContext;
 import com.iontorrent.wellmodel.WellCoordinate;
 import com.iontorrent.wellmodel.WellSelection;
 import com.vaadin.Application;
@@ -72,7 +75,7 @@ import com.vaadin.ui.Window.Notification;
 public class TSVaadin extends Application implements
 		HttpServletRequestListener, ParameterHandler {
 
-	public static String VERSION = "2.3.1";
+	public static String VERSION = "2.3.3";
 
 	static {
 		Logger.global.setLevel(Level.WARNING);
@@ -116,7 +119,7 @@ public class TSVaadin extends Application implements
 	private PerformanceMonitor perf;
 	private File logfolder;
 	private VerticalLayout mainLayout;
-
+	private WellSelection inputReads;
 	private static final String PERFSTATS = "tsl_perfstats.csv";
 	private static final String MODSTATS = "tsl_modulestats.csv";
 	private static final String LOGDIRS[] = {
@@ -163,7 +166,9 @@ public class TSVaadin extends Application implements
 		}
 
 	}
-
+	public ScoreMaskWindowCanvas getScoreWindow() {
+		return (ScoreMaskWindowCanvas)this.scoreWindow;
+	}
 	public String getBgUrl(String relative) {
 		String appurl = getURL().toString();
 		String bg = relative;
@@ -636,6 +641,8 @@ public class TSVaadin extends Application implements
 		// check if we have raw_dir and results_dir
 		boolean hasraw = false;
 		boolean hasres = false;
+		boolean hasreads = false;
+		String read_names = null;
 		for (; it.hasNext();) {
 			String key = "" + it.next();
 			String value = "" + ((String[]) par.get(key))[0];
@@ -649,19 +656,85 @@ public class TSVaadin extends Application implements
 					hasraw = true;
 				else if (key.equalsIgnoreCase("res_dir"))
 					hasres = true;
+				else if (key.equalsIgnoreCase("read_names")) {
+					hasreads = true;
+					read_names = value;
+				}
 			}
 		}
-		if (hasraw && hasres) {
+		if (hasraw || hasres) {
 			this.expWindow.open();
 			expWindow.handleOk();
+			if (hasreads) {				
+				parseAndShowReads("Reads from URL", read_names);
+				
+				
+			}			
 		} else
 			main.showNotification("Select an analysis in the db",
 					"<br/>Browse the database and select an analysis to view",
 					Window.Notification.TYPE_HUMANIZED_MESSAGE);
 		// dbWindow.open();
-
+		
 	}
 
+	public void parseAndShowReads(String title, String read_names) {
+		// parse read names
+		String sep = "_";
+		if (read_names.indexOf(",")>-1) sep = ",";
+		else if (read_names.indexOf(" ")>-1) sep = " ";
+		else if (read_names.indexOf("/")>-1) sep = "/";
+		else if (read_names.indexOf("-")>-1) sep = "-";
+		
+		p("Got read names: "+read_names);
+		ArrayList<String> names = StringTools.parseList(read_names, sep);
+		ArrayList<WellCoordinate> coords = new ArrayList<WellCoordinate>();
+		
+		WellCoordinate first = null;
+		for (String name: names) {	
+			WellCoordinate coord = null;
+			if (!Character.isDigit(name.charAt(0))){
+				coord = SffRead.getWell(name);
+			}
+			else {
+				// just extract row/col
+				int pos = name.indexOf("_");
+				if (pos < 0) pos = name.indexOf(".");
+				if (pos < 0) pos = name.indexOf(":");
+				if (pos < 0) pos = name.indexOf("/");
+				try {
+					int row = Integer.parseInt(name.substring(0, pos-1));
+					int col = Integer.parseInt(name.substring(pos+1));
+					coord = new WellCoordinate(row, col);
+				}
+				catch (Exception e) {
+					this.showMessage("Cannot parse", "Could not extract well coordinate from "+name);
+				}
+                
+			}
+			if (coord != null) {
+				coords.add(coord);
+				if (first == null) {
+					first = coord;
+				}
+			}
+		}
+		WellSelection sel = new WellSelection(coords);
+		sel.setTitle(title);
+		inputReads = sel;
+		if (exp != null) {
+			exp.getWellContext().setSelection(sel);
+			this.tableWindow.open();
+		}
+		setWellCoordinate(first, false);
+//		if (exp.hasSff() || exp.hasWells()) ionoWindow.open();
+//		if (exp.hasBam()) this.alignWindow.open();
+//		this.tableWindow.reopen();
+	}
+
+	public WellSelection getInputReads() {
+		return inputReads;
+	}
 	public CompositeExperiment getCompositeExperiment() {
 		return comp;
 	}
@@ -683,6 +756,9 @@ public class TSVaadin extends Application implements
 	}
 
 	public void setExperimentContext(ExperimentContext exp) {
+		setExperimentContext(exp, false);
+	}
+	public void setExperimentContext(ExperimentContext exp, boolean quiet) {
 		this.exp = exp;
 		scoremask = null;
 		if (exp != null) {
@@ -711,9 +787,9 @@ public class TSVaadin extends Application implements
 			
 		}
 		if (exp == null) {
-			expWindow.setDescription("Got no experiment context");
+			if (!quiet) expWindow.setDescription("Got no experiment context");
 		} else {
-			expWindow.setDescription("Got experiment with results folder<br>"
+			if (!quiet) expWindow.setDescription("Got experiment with results folder<br>"
 					+ exp.getResultsDirectory());
 		}
 	}
@@ -727,21 +803,31 @@ public class TSVaadin extends Application implements
 		}
 		exp.getWellContext();
 		// set the default coord to about middle
-		int mx = exp.getNrcols() / 2;
-		int my = exp.getNrrows() / 2;
-		if (mx == 0) {
-			p("Got no rows/cols yet.. using 200");
-			mx = 200;
-			my = 200;
-		}
-		WellCoordinate mid = new WellCoordinate(mx, my);
-		p("middle:" + mid);
-		exp.getWellContext().setCoordinate(mid);
-		WellSelection sel = new WellSelection(mx - 10, my - 10, mx + 10,
+		
+		WellSelection sel = inputReads;
+		WellCoordinate mid = null;
+		if (this.inputReads  == null || inputReads.getAllWells().size()<1) {
+			int mx = exp.getNrcols() / 2;
+			int my = exp.getNrrows() / 2;
+			if (mx == 0) {
+				p("Got no rows/cols yet.. using 200");
+				mx = 200;
+				my = 200;
+			}
+			sel = new WellSelection(mx - 10, my - 10, mx + 10,
 				my + 10);
+			
+			mid = new WellCoordinate(mx, my);
+			p("middle:" + mid);
+			
+		}
+		else {
+			mid = sel.getAllWells().get(0);
+		}
+		exp.getWellContext().setCoordinate(mid);
 		exp.getWellContext().setSelection(sel);
 		if (exp.hasWells()) {
-			if (tableWindow.isOpen())
+			if (inputReads != null || tableWindow.isOpen())
 				tableWindow.open();
 			else
 				tableWindow.close();
@@ -841,9 +927,9 @@ public class TSVaadin extends Application implements
 		}
 		exp.makeRelative(coord);
 
-		this.showMessage("Well selected", "Selecting well "
-				+ (coord.getCol() + exp.getColOffset()) + "/"
-				+ (coord.getRow() + exp.getRowOffset()));
+//		this.showMessage("Well selected", "Selecting well "
+//				+ (coord.getCol() + exp.getColOffset()) + "/"
+//				+ (coord.getRow() + exp.getRowOffset()));
 		if (exp.doesExplogHaveBlocks() && this.comp != null) {
 			DatBlock b = comp.findBlock(coord);
 			if (b != null) {

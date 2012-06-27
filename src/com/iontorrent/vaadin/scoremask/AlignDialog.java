@@ -12,9 +12,12 @@ public class AlignDialog extends Window {
     Recipient r; 
     TextField tread;
     TextField tref ;
-
-    public AlignDialog(final Window parent, String title, String question, String seq, String ref, Recipient recipient) {
+    Window parent;
+    public AlignDialog(final Window par, String title, String question, String seq, String ref, Recipient recipient) {
         r = recipient;
+        
+        if (par.getParent() != null) parent = par.getParent();
+        else parent = par;
         tread = new TextField();
         tref = new TextField();
         setCaption(title);

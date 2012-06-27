@@ -42,7 +42,7 @@ case "$1" in
 		
 		# insert several JkMount lines before the VirtualHost end
 		if ! grep "# Connection to Torrent Scout via tomcat" $conffile  1>/dev/null ; then
-			sed -i 's:\(</VirtualHost>\):\# Connection to Torrent Scout via tomcat\n    JkMount /TSL tsl\n    JkMount /TSL/* tsl\n    JkMount /LogServlet/* tsl\n    JkMount /LogServlet tsl\n </VirtualHost>:' $conffile
+			sed -i 's:\(</VirtualHost>\):\# Connection to Torrent Scout via tomcat\n    JkMount /IgvServlet tsl\n    JkMount /IgvServlet/* tsl\n    JkMount /TSL tsl\n    JkMount /TSL/* tsl\n    JkMount /LogServlet/* tsl\n    JkMount /LogServlet tsl\n </VirtualHost>:' $conffile
 		fi
 		
 		# enable the apache tomcat connector (port 8009) if we haven't already done so		

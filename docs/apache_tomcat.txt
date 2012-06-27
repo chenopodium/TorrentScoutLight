@@ -1,0 +1,62 @@
+Apache Tomcat integration (example: avery)
+===========================================
+Comments and instructions are preceded with ###
+
+### Check if TSL is actually installed:
+ls -la /var/lib/tomcat6/webapps
+### If you see TSL, it is installed. Otherwise, if you do not see it, or if you think it maybe an old version, update/install it with:
+sudo apt-get install ion-torrentscout-light
+
+sudo apt-get install libapache2-mod-jk
+cd /etc/apache2
+
+### Add the following lines into the file:
+
+sudo nano tslworkers.properties
+
+# Define 1 real worker using ajp13
+worker.list=tsl
+# Set properties for tsl (ajp13)
+worker.tsl.type=ajp13
+worker.tsl.host=localhost
+worker.tsl.port=8009
+
+### Press Ctrl-O and then enter to save, then Ctrl-X to exit nano
+# ls -la sites-enabled
+sudo nano sites-enabled/torrent-server
+# in case the file is empty:
+# sudo nano sites-enabled/000-default
+
+### Paste the following files into a section of a VirtualHost, before the </VirtualHost>
+    JkMount /TSL tsl
+    JkMount /TSL/* tsl
+    JkMount /LogServlet/* tsl
+    JkMount /LogServlet tsl
+### Press Ctrl-O and then enter to save, then Ctrl-X to exit nano
+
+sudo nano mods-enabled/jk.load 
+
+### After the LoadModule jk_module /usr/lib/apache2/modules/mod_jk.so
+### Paste in the following lines:
+JkWorkersFile   /etc/apache2/tslworkers.properties
+JkLogStampFormat "[%a %b %d %H:%M:%S %Y] "
+JkLogFile       /var/log/apache2/mod_jk.log
+JkLogLevel      error
+### Press Ctrl-O and then enter to save, then Ctrl-X to exit nano
+
+sudo nano /etc/tomcat6/server.xml 
+
+### Go tot he line with <Connector port="8009", about 1.5 pages down
+### And UNcomment it by REMOVING the <!-- and--> 
+    <!--
+		<Connector port="8009" protocol="AJP/1.3" redirectPort="8443" />
+	-->
+
+### activate config by reloading apache and restarting tomcat
+sudo /etc/init.d/apache2 reload
+sudo /etc/init.d/tomcat6 restart
+
+### To test, enter the followin address in a browser
+### NOTE it might take a few minutes for it to work 
+http://avery.iontorrent.com/TSL 
+### without any port number

@@ -9,12 +9,14 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.imageio.ImageIO;
 
 import com.iontorrent.expmodel.CompositeExperiment;
+import com.iontorrent.expmodel.DatBlock;
 import com.iontorrent.maskview.CompositeDensityPanel;
 import com.iontorrent.rawdataaccess.pgmacquisition.RawType;
 import com.iontorrent.rawdataaccess.wells.BfMaskFlag;
@@ -88,6 +90,13 @@ public class CompositeImage implements StreamResource.StreamSource {
         image = pan.myCreateImage(1200, 1200);
         return image;
 	}
+	public void markBlocks(ArrayList<DatBlock> foundblocks) {
+		pan.setFoundBlocks(foundblocks);		
+		pan.redrawImage();
+		image = null;
+        
+		
+	}
     public InputStream getStream() {
         
     	image = getImage(); 
@@ -126,5 +135,7 @@ public class CompositeImage implements StreamResource.StreamSource {
         //system.out.println("CompositeImage: " + msg);
         Logger.getLogger(CompositeImage.class.getName()).log(Level.INFO, msg);
     }
+
+	
 
 }

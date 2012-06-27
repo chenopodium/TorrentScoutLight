@@ -319,6 +319,10 @@ public class ExperimentWindow extends WindowOpener {
 		} else
 			p("Seems like I found bam: " + exp.getBamFileName());
 		
+		if (!exp.hasBam()) {
+			p("Got no bam, using rawtf");
+			exp.setBamFilename("rawtf.bam");
+		}
 		return check;
 	}
 
