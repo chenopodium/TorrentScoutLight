@@ -154,7 +154,7 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 		sel.setImmediate(true);
 		sel.addListener(this);
 
-		flagsel = addFlagSelect(h);
+		flagsel = addFlagSelect(h, false);
 
 		p("added flags");
 		flagsel.setImmediate(true);
@@ -397,15 +397,18 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 				});
 	}
 
-	private Select addFlagSelect(HorizontalLayout h) {
+	private Select addFlagSelect(HorizontalLayout h, boolean withScores) {
 		flagsel = new Select();
 		for (BfMaskFlag f : BfMaskFlag.values()) {
 			flagsel.addItem(f);
 			flagsel.setItemCaption(f, f.getName());
 		}
-		for (ScoreMaskFlag f : ScoreMaskFlag.values()) {
-			flagsel.addItem(f);
-			flagsel.setItemCaption(f, f.getName());
+		if (withScores) {
+			for (ScoreMaskFlag f : ScoreMaskFlag.values()) {
+			
+				flagsel.addItem(f);
+				flagsel.setItemCaption(f, f.getName());
+			}
 		}
 		flagsel.select(flag);
 		flagsel.addListener(new Select.ValueChangeListener() {

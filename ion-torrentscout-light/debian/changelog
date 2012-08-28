@@ -1,3 +1,9 @@
+ion-torrentscout-light (3.0.4) lucid; urgency=low
+
+  * bug fixes, memory improvments
+
+ -- root <Chantal Roth <chantal.roth@lifetech.com>  Wed, 20 Jun 2012 17:21:40 -0700
+
 ion-torrentscout-light (3.0.2) lucid; urgency=low
 
   *  same version nr as plugin
