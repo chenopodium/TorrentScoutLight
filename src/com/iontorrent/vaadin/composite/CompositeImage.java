@@ -20,6 +20,8 @@ import com.iontorrent.expmodel.DatBlock;
 import com.iontorrent.maskview.CompositeDensityPanel;
 import com.iontorrent.rawdataaccess.pgmacquisition.RawType;
 import com.iontorrent.rawdataaccess.wells.BfMaskFlag;
+import com.iontorrent.rawdataaccess.wells.ScoreMaskFlag;
+import com.iontorrent.results.scores.ScoreMask;
 import com.iontorrent.utils.ProgressListener;
 import com.iontorrent.wellmodel.BfHeatMap;
 import com.iontorrent.wellmodel.WellCoordinate;
@@ -36,13 +38,15 @@ public class CompositeImage implements StreamResource.StreamSource {
     CompositeExperiment comp;
     int reloads = 0;
     CompositeDensityPanel pan;
-    BfMaskFlag flag;
+    Object flag;
+    BfMaskFlag bfflag;
+    ScoreMaskFlag scoreflag;
     ProgressListener progress;
     RenderedImage image;
     int bucket;
     int flow;
     int frame;
-    public CompositeImage(CompositeExperiment comp, BfMaskFlag flag, ProgressListener progress, int flow, int frame, int bucket) {
+    public CompositeImage(CompositeExperiment comp, Object flag, ProgressListener progress, int flow, int frame, int bucket) {
         this.comp = comp;
         this.flag = flag;
         this.flow = flow;
@@ -51,7 +55,8 @@ public class CompositeImage implements StreamResource.StreamSource {
         this.progress = progress;
         if (comp != null) {
             pan = new CompositeDensityPanel(comp, null);           
-            p("Created density panel for flag "+flag);
+        //    p("Created density panel for flag "+flag);
+           
             pan.setFlag(flag);
 
         }
@@ -75,19 +80,25 @@ public class CompositeImage implements StreamResource.StreamSource {
        // p("Got CompositeExperiment context: " + comp.getBlocks());
 
         BfHeatMap mask = BfHeatMap.getMask(comp.getRootContext());
+        ScoreMask scoremask = comp.getRootContext().getWellContext().getScoreMask();
         RawType type = RawType.ACQ;
        
      //   CompositeWellDensity gen = new CompositeWellDensity(comp, type, flow, frame, bucket);
         String msg = null;
-        String file =mask.getImageFile("composite", flag, flow, type, frame);
-              
-        /* Create an image and draw something on it. */
-      
-        mask.readData(flag, file);
+        if (flag instanceof BfMaskFlag) {
+        	BfMaskFlag bfflag = (BfMaskFlag)flag;
+	        String file =mask.getImageFile("composite", bfflag, flow, type, frame);	              
+	        mask.readData(bfflag, file);	
+	        pan.setScoreMask(mask, bfflag, bucket, type, 0, frame);
+        }
+        else {
+        	ScoreMaskFlag scoreflag = (ScoreMaskFlag)flag;
+	        	            
+	        scoremask.readData(scoreflag);	
+	        pan.setScoreMask(scoremask, scoreflag, bucket);
+        }
 
-        pan.setScoreMask(mask, flag, bucket, type, 0, frame);
-
-        image = pan.myCreateImage(1200, 1200);
+        image = pan.myCreateImage(1000, 1000);
         return image;
 	}
 	public void markBlocks(ArrayList<DatBlock> foundblocks) {

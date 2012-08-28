@@ -1,6 +1,6 @@
 # Copyright (C) 2010 Ion Torrent Systems, Inc. All Rights Reserved
 # $Revision: 16728 $
-VERSION="2.3.0"
+VERSION="3.0.4"
 
 # BAM and SFF File Name
 RUN_NAME=${TSP_RUN_NAME}
@@ -25,13 +25,13 @@ echo PLUGINOUT=${PLUGINOUT}
 echo SFF=${SFF_FILE}
 echo BAM=${BAM_FILE}
 echo
-echo java -Xms2048m -Xmx3096m -jar ${DIRNAME}/Preparer.jar -cache ${ANALYSIS_DIR} -res ${ANALYSIS_DIR} -raw ${RAW_DATA_DIR} -plugin ${RESULTS_DIR}  -sff ${SFF_FILE} -bam ${BAM_FILE}
-java -Djava.awt.headless=true -Xms2048m -Xmx3096m -jar ${DIRNAME}/Preparer.jar -cache ${ANALYSIS_DIR} -res ${ANALYSIS_DIR} -raw ${RAW_DATA_DIR} -plugin ${RESULTS_DIR} -sff ${SFF_FILE} -bam ${BAM_FILE} -key ${RUNINFO__LIBRARY_KEY}
+echo java -Xms4G -Xmx8G -jar ${DIRNAME}/Preparer.jar -cache ${ANALYSIS_DIR} -res ${ANALYSIS_DIR} -raw ${RAW_DATA_DIR} -plugin ${RESULTS_DIR}  -sff ${SFF_FILE} -bam ${BAM_FILE}
+java -Djava.awt.headless=true -Xms4G -Xmx8G -jar ${DIRNAME}/Preparer.jar -cache ${ANALYSIS_DIR} -res ${ANALYSIS_DIR} -raw ${RAW_DATA_DIR} -plugin ${RESULTS_DIR} -sff ${SFF_FILE} -bam ${BAM_FILE} -key ${RUNINFO__LIBRARY_KEY}
 if [ "$?" -ne 0 ]; then
     echo "bad exit status from Preparer.jar, will still create link"
 fi
 
 echo
-echo python ${DIRNAME}/create_jnlp_link.py  --plugin-dir=${DIRNAME} --analysis-name=${ANALYSIS_NAME} --results-dir=${RESULTS_DIR}  --analysis-dir=${ANALYSIS_DIR} --raw-dir=${RAW_DATA_DIR} --url-root=${URL_ROOT}  --chip-type=${TSP_CHIPTYPE}
-python ${DIRNAME}/create_jnlp_link.py --plugin-dir=${DIRNAME} --analysis-name=${ANALYSIS_NAME} --results-dir=${RESULTS_DIR} --analysis-dir=${ANALYSIS_DIR} --raw-dir=${RAW_DATA_DIR} --url-root=${URL_ROOT} --chip-type=${TSP_CHIPTYPE} --sff=${SFF_FILE} --bam=${BAM_FILE}
+echo python ${DIRNAME}/createlink.py  --plugin-dir=${DIRNAME} --analysis-name=${ANALYSIS_NAME} --results-dir=${RESULTS_DIR}  --analysis-dir=${ANALYSIS_DIR} --raw-dir=${RAW_DATA_DIR} --url-root=${URL_ROOT}  --chip-type=${TSP_CHIPTYPE}
+python ${DIRNAME}/createlink.py --plugin-dir=${DIRNAME} --analysis-name=${ANALYSIS_NAME} --results-dir=${RESULTS_DIR} --analysis-dir=${ANALYSIS_DIR} --raw-dir=${RAW_DATA_DIR} --url-root=${URL_ROOT} --chip-type=${TSP_CHIPTYPE} --sff=${SFF_FILE} --bam=${BAM_FILE}
 

@@ -50,7 +50,6 @@ import com.iontorrent.vaadin.utils.PerformanceMonitor;
 import com.iontorrent.vaadin.utils.WindowOpener;
 import com.iontorrent.vaadin.wholechip.WholeChipWindowCanvas;
 import com.iontorrent.vaadin.xy.XYWindow;
-import com.iontorrent.wellmodel.WellContext;
 import com.iontorrent.wellmodel.WellCoordinate;
 import com.iontorrent.wellmodel.WellSelection;
 import com.vaadin.Application;
@@ -75,7 +74,7 @@ import com.vaadin.ui.Window.Notification;
 public class TSVaadin extends Application implements
 		HttpServletRequestListener, ParameterHandler {
 
-	public static String VERSION = "2.3.3";
+	public static String VERSION = "3.0.4";
 
 	static {
 		Logger.global.setLevel(Level.WARNING);
@@ -287,7 +286,7 @@ public class TSVaadin extends Application implements
 
 		it = menu.addItem("|", null);
 
-		it = menu.addItem("Regional views", null, null);
+		it = menu.addItem("Regional Views", null, null);
 		it.setDescription("Torrent Explorer type funcationality, view/export regional (raw) data, find the incorporation signals, view regional emptyt races, compute background subtraction and create masks yourself");
 
 		add(it, this.rawWindow);
@@ -781,6 +780,9 @@ public class TSVaadin extends Application implements
 			msg += "Chip type: " + exp.getChipType() + "<br>";
 			msg += "Raw Folder: " + exp.getRawDir() + "<br>";
 			msg += "Results Folder: " + exp.getResultsDirectory() + "<br>";
+			msg += "Bfmask file: " + exp.getBfMaskFile() + "<br>";
+			msg += "BAM file: " + exp.getBamFilePath() + "<br>";
+			msg += "SFF file: " + exp.getSffFilePath() + "<br>";
 			msg += "Nr flows: " + exp.getNrFlows() + "<br>";						
 			msg += "FTP Status: " + exp.getStatus();			
 			labelexperiment.setDescription(msg);
@@ -827,10 +829,11 @@ public class TSVaadin extends Application implements
 		exp.getWellContext().setCoordinate(mid);
 		exp.getWellContext().setSelection(sel);
 		if (exp.hasWells()) {
-			if (inputReads != null || tableWindow.isOpen())
-				tableWindow.open();
-			else
-				tableWindow.close();
+			tableWindow.reopen();
+//			if (inputReads != null || tableWindow.isOpen())
+//				tableWindow.open();
+//			else
+//				tableWindow.close();
 		}
 		//maskWindow.clear();
 		etWindow.clear();
@@ -838,6 +841,7 @@ public class TSVaadin extends Application implements
 		this.processWindow.clear();
 		// tabsheet.setSelectedTab(viewTab);
 		if (!exp.doesExplogHaveBlocks()) {
+			p("Got no blocks");
 			if (exp.hasBfMask()) {
 				//maskWindow.open();
 				etWindow.open();
@@ -1009,8 +1013,10 @@ public class TSVaadin extends Application implements
 				
 			} else if (server.startsWith("blackbird.itw")) {
 				dburl =  "10.45.3.167:5432/iondb";
+			} else if (server.startsWith("curacao")) {
+				dburl =  "blackbird.bev:5432/iondb";
 				
-			} else if (server.startsWith("10.33.106")) {
+			} else if (server.startsWith("10.33.106") || server.startsWith("cbd0")) {
 				dburl = "10.33.106.11:5432/iondb";
 				p("Got carlsbad db url");
 			} else if (server.startsWith("rnd3.itw")

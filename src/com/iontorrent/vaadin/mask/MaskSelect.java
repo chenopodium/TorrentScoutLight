@@ -139,6 +139,7 @@ public class MaskSelect {
 		else if (type == BG) m = exp.getBgMask();
 		else if (type == USE) m = exp.getSignalMask();
 		else if (type == HISTO) m = exp.getHistoMask();
+		if (m != null) m.wakeUp();
 		return m;
 	}
 
@@ -151,16 +152,21 @@ public class MaskSelect {
 	}
 
 	public BitMask getSelectedMask() {
+		if (selectedMask != null) selectedMask.wakeUp();
 		return selectedMask;
 	}
 
 	public BitMask getSelection() {
-		return selectedMask;
+		return getSelectedMask();
 	}
 
 	private void p(String msg) {
 		////system.out.println("Maskselect: " + key + ":" + msg);
 		//Logger.getLogger(MaskSelect.class.getName()).log(Level.INFO, msg);
+	}
+	
+	public void setWidth(int pixel) {
+		if (sel != null) sel.setWidth(pixel+"px");
 	}
 
 	private void rebuildCombo() {
@@ -170,7 +176,7 @@ public class MaskSelect {
 			sel = new Select();
 			sel.setNullSelectionAllowed(true);
 			sel.setDescription(desc);
-			sel.setWidth("90px");
+			sel.setWidth("100px");
 			isnew = true;
 		} else {
 			p("rebuilding maskselect. not new. removing all listeners");
@@ -189,6 +195,7 @@ public class MaskSelect {
 			sel.select(curmask);
 			sel.setValue(curmask);
 			this.selectedMask = curmask;
+			if (selectedMask != null) selectedMask.wakeUp();
 
 			// sel.setc
 		}
@@ -202,6 +209,7 @@ public class MaskSelect {
 
 						BitMask m = (BitMask) id.getValue();
 						selectedMask = m;
+						if (selectedMask != null) selectedMask.wakeUp();
 						setMainContMask(m);
 						p("Mask got selected: " + m);
 						

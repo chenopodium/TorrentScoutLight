@@ -127,6 +127,7 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 				if (curmask == null) curmask = maincont.getMasks().get(0);
 			}
 		}
+		if (curmask != null) curmask.wakeUp();
 		p("Curmask is now: " + curmask);
 		maincont.setPreferrednrwidgets(5);
 
@@ -305,6 +306,7 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 			if (id.getValue() instanceof BitMask) {
 				BitMask m = (BitMask) id.getValue();
 				curmask = m;
+				curmask.wakeUp();
 				p("Current mask is: " + curmask);
 				selectedtab = calcLayout;
 
@@ -318,6 +320,7 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 			if (id.getValue() instanceof BitMask) {
 				BitMask m = (BitMask) id.getValue();
 				curmask = m;
+				curmask.wakeUp();
 				p("Current mask is: " + curmask);
 				selectedtab = pickLayout;
 			}
@@ -406,7 +409,12 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 				}
 
 				curmask = selc.getSelection();
-				if (curmask != null) compute(a, b, curmask);
+				
+				if (curmask != null) {
+					curmask.wakeUp();
+					compute(a, b, curmask);
+					
+				}
 				else {
 					InputDialog input = new InputDialog(mywindow, "Name of result mask: ", new Recipient() {
 
@@ -793,6 +801,7 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 		if (id.getValue() instanceof BitMask) {
 			BitMask m = (BitMask) id.getValue();
 			curmask = m;
+			curmask.wakeUp();
 			p("Show changed: Current mask is: " + curmask);
 			selectedtab = editLayout;
 			reopen();

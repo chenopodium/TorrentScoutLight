@@ -77,6 +77,7 @@
 </head>
         <body>
                 <h2>TorrentScout Alignment Search Parameters</h2>
+                <p>If you enter no parameters at all, it will simply compute the standard index files (if it hasn't already computed them)</p>
         <div id="formwrap">
                  <form id="inputform" align="left">
 <p>
@@ -91,9 +92,9 @@
     <td><font size="2"><strong>Alignment sequence (eg  TTT)</strong><br>(? = any base or gap, _ =gap)</font>   </td>
     <td><font size="2"><strong>Name of heat map</strong><br>(X will be replaced with G/A/T/C)</font>   </td></tr>
   <tr>
-    <td><input name="read_0" value="TT_"></td>
-    <td><input name="align_0" value="TTT"></td>
-    <td><input name="heatmap_0" maxlength="40" value="missed_T"></td></tr>
+    <td><input name="read_0" value=""></td>
+    <td><input name="align_0" value=""></td>
+    <td><input name="heatmap_0" maxlength="40" value=""></td></tr>
   <tr>
     <td><input name="read_1" value="" ></td>
     <td><input name="align_1" value=""></td>
@@ -114,9 +115,9 @@
     <td><input name="align_4" ></td>
     <td><input name="heatmap_4" maxlength="40"></td></tr>
   
-  </table><br></p>
+  </table><br>
   	</form>
-                <input id="postbutton" type="submit" value="Compute heat maps">
+                <input id="postbutton" type="submit" value="Compute heat maps (and index files)">
         </div>
 
         <h3>JSON Result</h3>

@@ -73,7 +73,7 @@ public class ScoreMaskWindowCanvas extends WindowOpener implements
 	ExperimentContext exp;
 	ProgressIndicator indicator;
 	int x;
-
+	private static final int MAX_RES = 5000;
 	int y;
 	ScoreMaskFlag flag;
 	Canvas canvas;
@@ -91,6 +91,8 @@ public class ScoreMaskWindowCanvas extends WindowOpener implements
 	String maskname;
 	long total;
 
+	private boolean autoLoad;
+	
 	ScoreMaskFlag ALIGN_FLAG;
 	ScoreMaskFlag SCORE_FLAG;
 	ScoreMaskFlag PERFECT_FLAG;
@@ -106,10 +108,11 @@ public class ScoreMaskWindowCanvas extends WindowOpener implements
 				description, x, y, 800, 800);
 		this.app = app;
 		bucket = 5;
+		setAutoLoad(true);
 		ALIGN_FLAG = ScoreMaskFlag.CUSTOM1;
 		SCORE_FLAG = ScoreMaskFlag.CUSTOM2;
 		PERFECT_FLAG = ScoreMaskFlag.CUSTOM3;
-		ALIGN_FLAG.setName("Alignment searches");
+		ALIGN_FLAG.setName("Alignments");
 		ALIGN_FLAG
 				.setDescription("The result of (previous) alignment or sequence searches");
 		SCORE_FLAG.setName("Score filtering");
@@ -148,12 +151,13 @@ public class ScoreMaskWindowCanvas extends WindowOpener implements
 
 	public void setFlag(ScoreMaskFlag flag) {
 		this.flag = flag;
+		this.setAutoLoad(true);
 	}
 	@Override
 	public void windowOpened(final Window mywindow) {
 		p("Creating bfmask image");
 		if (flag == null)
-			flag = ScoreMaskFlag.INDEL;
+			flag = ScoreMaskFlag.Q20LEN;
 		exp = app.getExperimentContext();
 		if (oldexp == null || exp != oldexp) {
 			if (exp.is318())
@@ -276,36 +280,40 @@ public class ScoreMaskWindowCanvas extends WindowOpener implements
 		mywindow.addComponent(h);
 
 		mask = app.getScoreMask();
-		mask.readData(flag);
-
-		if (!mask.hasImage(flag)) {
-			p("Don't have image for flag " + flag + " yet: "
-					+ mask.getImageFile(flag));
-
-			if (thread == null) {
-				if (!flag.isCustom()) {
-					p("Flag " + flag
-							+ ":  got no image, will start compute thread");
-					if (doneset == null)
-						doneset = new TreeSet();
-					if (doneset.contains(flag)) {
-						app.showMessage("Score Mask",
-								"I could not compute the heat map for  " + flag);
-						return;
+		
+		if (autoLoad) {
+			p("autload: reading data for flag "+flag);
+			mask.readData(flag);
+	
+			if (!mask.hasImage(flag)) {
+				p("Don't have image for flag " + flag + " yet: "
+						+ mask.getImageFile(flag));
+	
+				if (thread == null) {
+					if (!flag.isCustom()) {
+						p("Flag " + flag
+								+ ":  got no image, will start compute thread");
+						if (doneset == null)
+							doneset = new TreeSet();
+						if (doneset.contains(flag)) {
+							app.showMessage("Score Mask",
+									"I could not compute the heat map for  " + flag);
+							return;
+						}
+						if (indicator != null) {
+							h.removeComponent(indicator);
+						}
+						indicator = new ProgressIndicator(new Float(0.0));
+						indicator.setHeight("40px");
+	
+						indicator.setDescription("Computing heat map for " + flag);
+						indicator.setPollingInterval(5000);
+						mywindow.addComponent(indicator);
+						thread = new WorkThread(this, flag);
+						app.showMessage("Computing...", "Computing heat map for "
+								+ flag);
+						thread.execute();
 					}
-					if (indicator != null) {
-						h.removeComponent(indicator);
-					}
-					indicator = new ProgressIndicator(new Float(0.0));
-					indicator.setHeight("40px");
-
-					indicator.setDescription("Computing heat map for " + flag);
-					indicator.setPollingInterval(5000);
-					mywindow.addComponent(indicator);
-					thread = new WorkThread(this, flag);
-					app.showMessage("Computing...", "Computing heat map for "
-							+ flag);
-					thread.execute();
 				}
 			}
 		}
@@ -326,8 +334,18 @@ public class ScoreMaskWindowCanvas extends WindowOpener implements
 
 		hcan.addComponent(vzoom);
 
-		if (!mask.hasImage(flag)) {
-			app.showMessage("Score Mask", "I don't have the heat map for  "
+		if (!autoLoad) {
+			p("!autoload. do nothing");
+		}
+		else if (!mask.hasImage(flag)) {
+			if (flag.isIn(ScoreMaskFlag.SEP_FLAGS)) {
+				// check if file is there
+				if (!FileUtils.exists(exp.getSepFileName())) {
+					app.showMessage("Score Mask", "There is no separator.h5 file, I can't compute the heat map for  "
+							+ flag);	
+				}
+			}
+			else app.showMessage("Score Mask", "I don't have the heat map for  "
 					+ flag);
 
 		} else {
@@ -335,10 +353,10 @@ public class ScoreMaskWindowCanvas extends WindowOpener implements
 				bfmask = new ScoreMaskImage(exp, flag, bucket);
 			this.setWidth(bfmask.getImage().getWidth() + 50 + "px");
 			this.setHeight(bfmask.getImage().getHeight() + 50 + "px");
-			p("Getting streamresource");
+			p("Getting streamresource for flag "+flag);
 			imageresource = new StreamResource(
 					(StreamResource.StreamSource) bfmask, exp.getFileKey()
-							+ flag.getName() + "_score.png", app);
+							+ flag.getName()+(int)(Math.random()*100) + "_score.png", app);
 			imageresource.setCacheTime(60000);
 			// imageresource.
 
@@ -405,11 +423,12 @@ public class ScoreMaskWindowCanvas extends WindowOpener implements
 
 			if (flag.isCustom()) {
 				total = mask.getTotal(flag);
+				
 				if (total < 5000) {
 					selectAllWellsOfResult(5000,
-							"All results of " + flag.getDescription());
+							total+" results of " + flag.getDescription());
 				} else
-					getLatestSelection("Subset of " + flag.getDescription());
+					getLatestSelection(5000+" (sub)results of " + flag.getDescription());
 			}
 			app.openTable();
 		}
@@ -494,7 +513,7 @@ public class ScoreMaskWindowCanvas extends WindowOpener implements
 					@Override
 					public void fileSelected(File file) {
 						p("Got file:" + file);
-						loadResult(file);
+						loadResult(file, flag);
 					}
 
 					
@@ -514,15 +533,21 @@ public class ScoreMaskWindowCanvas extends WindowOpener implements
 		browser.open();
 
 	}
-	public void loadResult(File file) {
+	public void loadResult(File file, ScoreMaskFlag flag) {
 		if (file != null && file.isFile() && file.exists()) {
-			if (flag == null) flag = this.ALIGN_FLAG;;
+			flag = this.ALIGN_FLAG;
 			flag.setFilename(file.toString());
+			String name = file.getName();
+			int dot = name.indexOf(".");
+			name = name.substring(0, dot);
+			flag.setName(name);
+			flag.setDescription("Result of search from file "+file.getPath());
 			mask = app.getScoreMask();
 			mask.readData(flag);
 			app.showMessage("Open",
 					"Data loaded for " + flag.getName());
 			bfmask = null;
+			autoLoad = true;
 			reopen();
 		} else
 			app.showMessage("Not Opened",
@@ -1005,6 +1030,7 @@ public class ScoreMaskWindowCanvas extends WindowOpener implements
 		if (id.getValue() instanceof ScoreMaskFlag) {
 			ScoreMaskFlag b = (ScoreMaskFlag) id.getValue();
 			this.flag = b;
+			this.setAutoLoad(true);
 			// pick wells o fthis flag
 			if (flag.isCustom()) {
 				total = mask.getTotal(flag);
@@ -1031,7 +1057,8 @@ public class ScoreMaskWindowCanvas extends WindowOpener implements
 		int d = 50;
 		// app.showMessage("Selecing wells",
 		// "Selecting wells with data for flag " + flag + " (at most 5000)");
-		mask.readAllData();
+		if (this.flag != null) mask.readData(flag);
+		
 
 		ArrayList<WellCoordinate> wells = mask.getAllCoordsWithData(flag, 1000,
 				x - d, y - d, x + d, y + d);
@@ -1089,7 +1116,7 @@ public class ScoreMaskWindowCanvas extends WindowOpener implements
 	}
 
 	private static void p(String msg) {
-		// system.out.println("ScoreMaskWindowCanvas: " + msg);
+		System.out.println("ScoreMaskWindowCanvas: " + msg);
 		Logger.getLogger(ScoreMaskWindowCanvas.class.getName()).log(Level.INFO,
 				msg);
 	}
@@ -1107,5 +1134,13 @@ public class ScoreMaskWindowCanvas extends WindowOpener implements
 		if (indicator != null)
 			indicator.setValue(((double) p / 100.0d));
 		// progress.setValue("Creating composite image: " + p + "%");
+	}
+
+	boolean isAutoLoad() {
+		return autoLoad;
+	}
+
+	public void setAutoLoad(boolean autoLoad) {
+		this.autoLoad = autoLoad;
 	}
 }

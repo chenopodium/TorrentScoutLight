@@ -39,6 +39,7 @@ import com.iontorrent.utils.ProgressListener;
 import com.iontorrent.utils.StringTools;
 import com.iontorrent.utils.io.FileTools;
 import com.iontorrent.vaadin.TSVaadin;
+import com.iontorrent.vaadin.mask.MaskSelect;
 import com.iontorrent.vaadin.utils.ExportTool;
 import com.iontorrent.vaadin.utils.FileDownloadResource;
 import com.iontorrent.vaadin.utils.JFreeChartWrapper;
@@ -76,16 +77,17 @@ import com.vaadin.ui.Window;
  * @author Chantal Roth chantal.roth@lifetech.com
  */
 public class RegionChartWindow extends WindowOpener implements TaskListener,
-		ProgressListener {
+		ProgressListener, Property.ValueChangeListener {
 
 	private TSVaadin app;
 	ExplorerContext maincont;
 	ExperimentContext exp;
 	TextArea text;
+	MaskSelect maskselect;
 	String savefile;
 	ProgressIndicator indicator;
 	JFreeChart regionalcharts[];
-	JFreeChart maskcharts[];
+	JFreeChart curmaskchart;
 	RegionalThread rthread;
 	MaskThread mthread;
 	HorizontalLayout hor;
@@ -99,6 +101,7 @@ public class RegionChartWindow extends WindowOpener implements TaskListener,
 	int MAX = 10000;
 	Label titlelabel;
 
+	BitMask curmask;
 	TextField tflow;
 	TextField tcurflow;
 	TextField tdelay;
@@ -111,7 +114,7 @@ public class RegionChartWindow extends WindowOpener implements TaskListener,
 	FlowDataType type;
 	ArrayList<FlowData> regionalresults[];
 	
-	ArrayList<FlowData> perwellresults[];
+	ArrayList perwellresults;
 	FlowFilter[] filters;
 	
 	private Layout curlayout = Layout.Tabs;
@@ -174,25 +177,23 @@ public class RegionChartWindow extends WindowOpener implements TaskListener,
 			}
 		}
 		else {
-			if (this.maskcharts != null) {
+			if (curmaskchart != null) {
 				ArrayList<BitMask> masks = maincont.getMasks();
-				for (int i = 0; i < this.maskcharts.length; i++) {
 					try {
-						f = File.createTempFile("export_"+masks.get(i).getName()+"_" + exp.getId() + "_"+filters[i].getBase()
+						f = File.createTempFile("export_"+curmask.getName()+"_" + exp.getId() 
 								+ maincont.getAbsoluteCorner().getCol() + "_"
 								+ maincont.getAbsoluteCorner().getRow(), ".png");
 					} catch (IOException e) {
 			
 					}
 					if (f != null) {
-						f.deleteOnExit();
-						if (maskcharts[i] != null) {
-							this.exportPng(f, maskcharts[i]);
-							FileDownloadResource down = new FileDownloadResource(f, this.app);
-							app.getMainWindow().open(down, "_blank", 600, 600, 1);
-						}
+						f.deleteOnExit();						
+						this.exportPng(f, curmaskchart);
+						FileDownloadResource down = new FileDownloadResource(f, this.app);
+						app.getMainWindow().open(down, "_blank", 600, 600, 1);
+						
 					}
-				}
+				
 			}
 		}
 	}
@@ -245,20 +246,18 @@ public class RegionChartWindow extends WindowOpener implements TaskListener,
 				}
 			}
 			else {
-				if (this.perwellresults != null) {
-					ArrayList<BitMask> masks = maincont.getMasks();
-					for (int i = 0; i < perwellresults.length; i++) {
-						
-						s = s.append(nl+masks.get(i).getName() + nl);
-						ArrayList<FlowData> flowdatalist = perwellresults[i];
-						if (flowdatalist != null) {
-							for (FlowData fdat : flowdatalist) {
-								String sdat = Arrays.toString(fdat.getData());
-								sdat = sdat.substring(1, sdat.length()-2);
-								s = s.append(""+ fdat.getCol()+", "+fdat.getRow()+ ", "+sdat	+ nl);
-							}
+				if (this.perwellresults != null && curmask != null) {
+							
+					s = s.append(nl+curmask.getName() + nl);
+					ArrayList<FlowData> flowdatalist = perwellresults;
+					if (flowdatalist != null) {
+						for (FlowData fdat : flowdatalist) {
+							String sdat = Arrays.toString(fdat.getData());
+							sdat = sdat.substring(1, sdat.length()-2);
+							s = s.append(""+ fdat.getCol()+", "+fdat.getRow()+ ", "+sdat	+ nl);
 						}
 					}
+					
 				}
 			}
 			FileTools.writeStringToFile(f, s.toString(), true);
@@ -363,15 +362,15 @@ public class RegionChartWindow extends WindowOpener implements TaskListener,
 		}
 		else this.startToCompute();
 		
-		if (this.maskcharts != null && maskcharts.length>0 && maskcharts[0] != null) {
-			this.afterComputeMaskCharts();
+		if (this.curmaskchart != null && curmask != null) {
+			this.afterComputeMaskChart(curmask);
 		}
 	}
 	public void experimentChanged() {
 		// overwrite if something important needs to happen
 		// for instance if cachces have to be cleared.
 		regionalresults = null;
-		maskcharts = null;
+		curmaskchart = null;
 		this.perwellresults = null;
 	}
 	
@@ -570,7 +569,9 @@ public class RegionChartWindow extends WindowOpener implements TaskListener,
 	
 
 	private void startcomputePerMaskView() {
+		addMasksTop();
 		ArrayList<Integer> curflows = parseFlow(tcurflow);
+		if (curmask == null) curmask = maincont.getSignalMask();
 		p("Got cur flows " + curflows);
 		if (curflows != null && curflows.size()>0) {
 			int flow = curflows.get(0);
@@ -590,91 +591,184 @@ public class RegionChartWindow extends WindowOpener implements TaskListener,
 		mthread.execute();
 
 	}
-	private void computeMaskCharts(int curflow) {
+//	private void computeMaskCharts(int curflow) {
+//		loader = app.getCubeLoader();
+//		ArrayList<BitMask> masks = maincont.getMasks();
+//		int nr = masks.size();
+//		TypeRaw type = new TypeRaw();
+//		perwellresults = new ArrayList[nr];
+//		maskcharts = new JFreeChart[nr];
+//		maincont.setFlow(curflow);
+//		maincont.clearData();
+//		for (int i = 0; i < nr; i++) {
+//			p("Computing for mask "+masks.get(i).getName());
+//			maincont.setSignalMask(masks.get(i));
+//			ArrayList<FlowData> res = loader.loadData(type, null, this);
+//			perwellresults[i] = res;			
+//			FlowMaskFramePanel pan = new FlowMaskFramePanel(maincont,res, masks.get(i));			
+//			maskcharts[i] = pan.createChart();
+//		}		
+//	}
+	private void computeMaskCharts(int curflow, BitMask mask) {
 		loader = app.getCubeLoader();
-		ArrayList<BitMask> masks = maincont.getMasks();
-		int nr = masks.size();
 		TypeRaw type = new TypeRaw();
-		perwellresults = new ArrayList[nr];
-		maskcharts = new JFreeChart[nr];
 		maincont.setFlow(curflow);
 		maincont.clearData();
-		for (int i = 0; i < nr; i++) {
-			p("Computing for mask "+masks.get(i).getName());
-			maincont.setSignalMask(masks.get(i));
-			ArrayList<FlowData> res = loader.loadData(type, null, this);
-			perwellresults[i] = res;			
-			FlowMaskFramePanel pan = new FlowMaskFramePanel(maincont,res, masks.get(i));			
-			maskcharts[i] = pan.createChart();
-		}		
-	}
-	private void afterComputeMaskCharts() {
-		
-		ArrayList<BitMask> masks = maincont.getMasks();
-		int nr = masks.size();
-		int wells = 0;
-		for (int i = 0; i <nr; i++) {
-			if (this.perwellresults[i] != null) {
-				wells += perwellresults[i].size();
-			}
-		}
-		titlelabel.setDescription("(region: "+maincont.getRegion()+", dx/dy="+region.getRegionOffsetX()+"/"+region.getRegionOffsetY()+")");
-		maskslayout.removeAllComponents();
-		maskslayout.addComponent(titlelabel);
-		TabSheet tabsheet = new TabSheet();
-		tabsheet.setImmediate(true);
-		if (curlayout == Layout.Tabs) maskslayout.addComponent(tabsheet);
-		
-		p("Computation per mask, adding charts: "+nr);
-		boolean ok = false;
-		for (int i = 0; i <nr; i++) {
-			BitMask mask = masks.get(i);
+		p("Computing for mask "+mask.getName());
+		maincont.setSignalMask(mask);
+		ArrayList<FlowData> res = loader.loadData(type, null, this);
+		perwellresults = res;			
+		FlowMaskFramePanel pan = new FlowMaskFramePanel(maincont,res, mask);
+		p("Got FlowMaskfrfamePanel");
+		if (res == null) {
 			
-			if (maskcharts != null && maskcharts[i] != null && masks.get(i) != null) {
-				final XYPlot plot = (XYPlot) this.maskcharts[i].getPlot();
-				ok = true;
-				final JFreeChartWrapper wrapper = new JFreeChartWrapper(maskcharts[i],
-						JFreeChartWrapper.RenderingMode.PNG);
-				wrapper.setWidth("550px");
-				wrapper.setImmediate(true);
-				wrapper.setHeight("450px");
-				wrapper.addListener(new ClickListener() {
-	
-					@Override
-					public void click(com.vaadin.event.MouseEvents.ClickEvent event) {
-						Point p = new Point(event.getRelativeX(), event.getRelativeY());
-						ChartRenderingInfo info = wrapper.getInfo(550, 450);
-						PlotRenderingInfo plotInfo = info.getPlotInfo();
-	
-						double x = plot.getDomainAxis().java2DToValue(p.getX(),
-								plotInfo.getDataArea(), plot.getDomainAxisEdge());
-	
-						double y = plot.getRangeAxis().java2DToValue(p.getY(),
-								plotInfo.getDataArea(), plot.getRangeAxisEdge());
-						String msg = "Got click at " + p;
-						msg += "<br>x/y= " + x + "/" + y;
-	
-						app.showMessage("Click", msg);
-	
-					}
-	
-				});
-				if (curlayout == Layout.Tabs) {
-					VerticalLayout myTabRoot = new VerticalLayout();
-					myTabRoot.addComponent(wrapper);	
-					myTabRoot.setImmediate(true);
-					// Add the component to the tab sheet as a new tab.
-					tabsheet.addTab(myTabRoot);				 
-					tabsheet.getTab(myTabRoot).setCaption(mask.getName());
-				}
-				else maskslayout.addComponent(wrapper);
-			}
+			app.showMessage("No data", "I got no data for mask "+mask.getName()+" - maybe there is no raw data, or the mask is empty?");
 		}
-		if (!ok) {
-			app.showLongMessage("No Charts","I was not able to compute the per mask charts for some reason");
+		curmaskchart = pan.createChart();
+			
+	}
+	private void afterComputeMaskChart(BitMask mask) {
+	
+	int wells = 0;
+	if (this.perwellresults != null) {
+		wells += perwellresults.size();
+	}
+	titlelabel.setDescription("(region: "+maincont.getRegion()+", dx/dy="+region.getRegionOffsetX()+"/"+region.getRegionOffsetY()+")");
+	addMasksTop();
+		
+	boolean ok = false;
+			
+	if (curmaskchart != null && mask != null) {
+		final XYPlot plot = (XYPlot) curmaskchart.getPlot();
+		ok = true;
+		final JFreeChartWrapper wrapper = new JFreeChartWrapper(curmaskchart,
+				JFreeChartWrapper.RenderingMode.PNG);
+		wrapper.setWidth("550px");
+		wrapper.setImmediate(true);
+		wrapper.setHeight("450px");
+		wrapper.addListener(new ClickListener() {
+
+			@Override
+			public void click(com.vaadin.event.MouseEvents.ClickEvent event) {
+				Point p = new Point(event.getRelativeX(), event.getRelativeY());
+				ChartRenderingInfo info = wrapper.getInfo(550, 450);
+				PlotRenderingInfo plotInfo = info.getPlotInfo();
+
+				double x = plot.getDomainAxis().java2DToValue(p.getX(),
+						plotInfo.getDataArea(), plot.getDomainAxisEdge());
+
+				double y = plot.getRangeAxis().java2DToValue(p.getY(),
+						plotInfo.getDataArea(), plot.getRangeAxisEdge());
+				String msg = "Got click at " + p;
+				msg += "<br>x/y= " + x + "/" + y;
+
+				app.showMessage("Click", msg);
+
+			}
+
+		});
+		maskslayout.addComponent(wrapper);
+		
+	}
+	if (!ok) {
+		if (mask == null) app.showLongMessage("No Charts","Select a mask to create a mask specific chart with raw traces");
+		//else if (curmaskchart == null) app.showLongMessage("No Charts","I got no JFreeChart object");
+	}
+
+}
+
+	private void addMasksTop() {
+		maskslayout.removeAllComponents();
+		//maskslayout.addComponent(titlelabel);
+		HorizontalLayout mhor = new HorizontalLayout();
+		if (curmask == null) curmask = maincont.getSignalMask();
+		maskselect = new MaskSelect("show", "View raw traces for mask", "Pick a mask to view", maincont, -1, (Property.ValueChangeListener) this, curmask);
+		maskselect.addGuiElements(mhor);
+		maskselect.setWidth(120);
+		maskslayout.addComponent(mhor);
+	}
+	@Override
+	public void valueChange(ValueChangeEvent event) {
+		Property id = event.getProperty();
+		if (id.getValue() instanceof BitMask) {
+			BitMask m = (BitMask) id.getValue();
+			curmask = m;
+			if (curmask != null) {
+				curmask.wakeUp();
+				p("Show changed: Current mask is: " + curmask);
+				startcomputePerMaskView();
+			}
+
 		}
 
 	}
+//	private void afterComputeMaskCharts() {
+//		
+//		ArrayList<BitMask> masks = maincont.getMasks();
+//		int nr = masks.size();
+//		int wells = 0;
+//		for (int i = 0; i <nr; i++) {
+//			if (this.perwellresults[i] != null) {
+//				wells += perwellresults[i].size();
+//			}
+//		}
+//		titlelabel.setDescription("(region: "+maincont.getRegion()+", dx/dy="+region.getRegionOffsetX()+"/"+region.getRegionOffsetY()+")");
+//		maskslayout.removeAllComponents();
+//		maskslayout.addComponent(titlelabel);
+//		TabSheet tabsheet = new TabSheet();
+//		tabsheet.setImmediate(true);
+//		if (curlayout == Layout.Tabs) maskslayout.addComponent(tabsheet);
+//		
+//		p("Computation per mask, adding charts: "+nr);
+//		boolean ok = false;
+//		for (int i = 0; i <nr; i++) {
+//			BitMask mask = masks.get(i);
+//			
+//			if (maskcharts != null && maskcharts[i] != null && masks.get(i) != null) {
+//				final XYPlot plot = (XYPlot) this.maskcharts[i].getPlot();
+//				ok = true;
+//				final JFreeChartWrapper wrapper = new JFreeChartWrapper(maskcharts[i],
+//						JFreeChartWrapper.RenderingMode.PNG);
+//				wrapper.setWidth("550px");
+//				wrapper.setImmediate(true);
+//				wrapper.setHeight("450px");
+//				wrapper.addListener(new ClickListener() {
+//	
+//					@Override
+//					public void click(com.vaadin.event.MouseEvents.ClickEvent event) {
+//						Point p = new Point(event.getRelativeX(), event.getRelativeY());
+//						ChartRenderingInfo info = wrapper.getInfo(550, 450);
+//						PlotRenderingInfo plotInfo = info.getPlotInfo();
+//	
+//						double x = plot.getDomainAxis().java2DToValue(p.getX(),
+//								plotInfo.getDataArea(), plot.getDomainAxisEdge());
+//	
+//						double y = plot.getRangeAxis().java2DToValue(p.getY(),
+//								plotInfo.getDataArea(), plot.getRangeAxisEdge());
+//						String msg = "Got click at " + p;
+//						msg += "<br>x/y= " + x + "/" + y;
+//	
+//						app.showMessage("Click", msg);
+//	
+//					}
+//	
+//				});
+//				if (curlayout == Layout.Tabs) {
+//					VerticalLayout myTabRoot = new VerticalLayout();
+//					myTabRoot.addComponent(wrapper);	
+//					myTabRoot.setImmediate(true);
+//					// Add the component to the tab sheet as a new tab.
+//					tabsheet.addTab(myTabRoot);				 
+//					tabsheet.getTab(myTabRoot).setCaption(mask.getName());
+//				}
+//				else maskslayout.addComponent(wrapper);
+//			}
+//		}
+//		if (!ok) {
+//			app.showLongMessage("No Charts","I was not able to compute the per mask charts for some reason");
+//		}
+//
+//	}
 	private class RegionalThread extends Task {
 
 		public RegionalThread(TaskListener list) {
@@ -719,7 +813,7 @@ public class RegionChartWindow extends WindowOpener implements TaskListener,
 		@Override
 		protected Void doInBackground() {
 			try {
-				computeMaskCharts(flow);
+				computeMaskCharts(flow, curmask);
 
 			} catch (Exception e) {
 				err("Got an error loading cube data for masks and flow "
@@ -743,7 +837,7 @@ public class RegionChartWindow extends WindowOpener implements TaskListener,
 			rthread = null;
 		}
 		else {
-			this.afterComputeMaskCharts();
+			this.afterComputeMaskChart(curmask);
 			mthread = null;
 		}
 		

@@ -40,6 +40,7 @@ public class MaskImage implements StreamResource.StreamSource {
 		this.exp = exp;
 		if (exp != null) {
 			this.mask = mask;
+			if (mask != null) mask.wakeUp();
 			//p("Creating mask image for :"+mask.getName()+" at "+mask.getRelCoord());
 			 pan = new MaskEditDensityPanel(exp.getExp(), mask, exp.getRasterSize());
 			 image = null;

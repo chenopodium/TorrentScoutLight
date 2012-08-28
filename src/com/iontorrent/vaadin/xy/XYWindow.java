@@ -46,6 +46,7 @@ import com.iontorrent.torrentscout.explorer.ExplorerContext;
 import com.iontorrent.utils.ErrorHandler;
 import com.iontorrent.utils.ProgressListener;
 import com.iontorrent.utils.io.FileTools;
+import com.iontorrent.utils.io.FileUtils;
 import com.iontorrent.vaadin.TSVaadin;
 import com.iontorrent.vaadin.mask.MaskSelect;
 import com.iontorrent.vaadin.utils.ExportTool;
@@ -277,8 +278,8 @@ public class XYWindow extends WindowOpener implements TaskListener,
 		if (flagb != null)
 			selb.select(flagb);
 		selb.setDescription("Mask for Y coordinate");
-		sela.setWidth("70px");
-		selb.setWidth("70px");
+		sela.setWidth("80px");
+		selb.setWidth("80px");
 
 		hor.addComponent(new Label("Y:"));
 		hor.addComponent(selb);
@@ -337,19 +338,28 @@ public class XYWindow extends WindowOpener implements TaskListener,
 
 		if (thread == null) {
 			if (!f.isCustom()) {
-				p("Flag " + f + ":  got no image, will start compute thread");
-				thread = new WorkThread(this, f);
-				if (indicator != null) {
-					hor.removeComponent(indicator);
+				if (f.isIn(ScoreMaskFlag.SEP_FLAGS)) {
+					// check if file is there
+					if (!FileUtils.exists(exp.getSepFileName())) {
+						app.showMessage("Score Mask", "There is no separator.h5 file, I can't compute the heat map for  "
+								+ f);	
+					}
 				}
-				indicator = new ProgressIndicator(new Float(0.0));
-				indicator.setHeight("40px");
-
-				indicator.setDescription("Computing heat map for " + f);
-				indicator.setPollingInterval(5000);
-				hor.addComponent(indicator);
-				thread.execute();
-				app.showMessage("No heatmap" ,"Need to compute heat map first for "+f);
+				else {
+					p("Flag " + f + ":  got no image, will start compute thread");
+					thread = new WorkThread(this, f);
+					if (indicator != null) {
+						hor.removeComponent(indicator);
+					}
+					indicator = new ProgressIndicator(new Float(0.0));
+					indicator.setHeight("40px");
+	
+					indicator.setDescription("Computing heat map for " + f);
+					indicator.setPollingInterval(5000);
+					hor.addComponent(indicator);
+					thread.execute();
+					app.showMessage("No heatmap" ,"Need to compute heat map first for "+f);
+				}
 			}
 			else app.showMessage("No heatmap" ,"There are no search results for the custom map "+f);
 		}
@@ -444,7 +454,7 @@ public class XYWindow extends WindowOpener implements TaskListener,
 		app.logModule(getName(), "compute " + a + "/" + b);
 		app.showMessage(this, "Computing 2D map of " + a + " and " + b);
 
-		calc = new XYCalculator(app.getScoreMask(), a, b, 40);
+		calc = new XYCalculator(maskselect.getSelectedMask(), app.getScoreMask(), a, b, 40);
 		calc.compute();
 		p("Computation result: " + calc);
 		this.intersection = calc.getIntersection();
@@ -462,11 +472,13 @@ public class XYWindow extends WindowOpener implements TaskListener,
 		// chart = createChart(calc);
 		chart2 = createChart2(calc);
 		// chart1 = createChart1(calc);
-		titlelabel = new Label("Chart around coordinate "
-				+ app.getExplorerContext().getAbsoluteCorner() + "+"
+		titlelabel = new Label("Chart using values at well coordinate "
+				+ app.getExplorerContext().getAbsoluteCorner() + ", dx/dy= "
 				+ app.getExplorerContext().getRasterSize());
 		ver.addComponent(titlelabel);
-
+		if (calc.getTotal()<1) {
+			app.showMessage("XYZ Chart", "There were no data points in your selection");
+		}
 		ver.addComponent(chart2);
 		// ver.addComponent(chart1);
 
@@ -488,11 +500,13 @@ public class XYWindow extends WindowOpener implements TaskListener,
 		ScoreMaskFlag flaga;
 		ScoreMaskFlag flagb;
 		ScoreMask scoremask;
-
-		public XYCalculator(ScoreMask scoremask, ScoreMaskFlag flaga,
+		BitMask bitmask;
+		
+		public XYCalculator(BitMask bitmask, ScoreMask scoremask, ScoreMaskFlag flaga,
 				ScoreMaskFlag flagb, int buckets) {
 			this.flaga = flaga;
 			this.flagb = flagb;
+			this.bitmask = bitmask;
 			this.scoremask = scoremask;
 			this.xybuckets = buckets;
 
@@ -522,6 +536,7 @@ public class XYWindow extends WindowOpener implements TaskListener,
 			inter.setName(flaga.getName() + " & " + flagb.getName());
 			total = 0;
 
+			int MAX_VALUE = 10000;
 			double[][] a = scoremask.getData(flaga);
 			double[][] b = scoremask.getData(flagb);
 
@@ -538,37 +553,43 @@ public class XYWindow extends WindowOpener implements TaskListener,
 				for (int j = 0; j < size; j++) {
 					int c = (startc + i);
 					int r = (startr + j);
-					if (c > scoremask.getNrCols())
+					if (c >= scoremask.getNrCols())
 						c = c - scoremask.getNrCols();
-					if (r > scoremask.getNrRows())
+					if (r >= scoremask.getNrRows())
 						r = r - scoremask.getNrRows();
 
 					if (total > MAX)
 						break;
+					
 					if (a[c][r] != 0 && b[c][r] != 0) {
 						// both have a value
 						// double x = flaga.getRealValue(a.getValue(c, r));
 						// double y = flagb.getRealValue(b.getValue(c, r));
 
-						double x = flaga.getRealValue((int) a[c][r]);
-						double y = flagb.getRealValue((int) b[c][r]);
-						inter.set(c, r, true);
-
-						XY xy = new XY(x, y);
-						xy.c = c + exp.getColOffset();
-						xy.r = r + exp.getRowOffset();
-						if (total % 1000 == 0)
-							p("Got value " + xy + "  at " + c + "/" + r);
-						values.add(xy);
-						if (x > maxx)
-							maxx = x;
-						if (y > maxy)
-							maxy = y;
-						if (x < minx)
-							minx = x;
-						if (y < miny)
-							miny = y;
-						total++;
+						if (bitmask == null || bitmask.get(c, r)) {
+							double x = flaga.getRealValue((int) a[c][r]);
+							double y = flagb.getRealValue((int) b[c][r]);
+							// values must not be too large
+							if (x < MAX_VALUE && y < MAX_VALUE) {
+								inter.set(c, r, true);
+		
+								XY xy = new XY(x, y);
+								xy.c = c + exp.getColOffset();
+								xy.r = r + exp.getRowOffset();
+								if (total % 1000 == 0)
+									p("Got value " + xy + "  at " + c + "/" + r);
+								values.add(xy);
+								if (x > maxx)
+									maxx = x;
+								if (y > maxy)
+									maxy = y;
+								if (x < minx)
+									minx = x;
+								if (y < miny)
+									miny = y;
+								total++;
+							}
+						}
 					}
 				}
 			}
@@ -665,6 +686,9 @@ public class XYWindow extends WindowOpener implements TaskListener,
 			return maxz;
 		}
 
+		public int getTotal() {
+			return total;
+		}
 		public ArrayList<XY> getValues(double x, double y) {
 			double dx = getDx();
 			double dy = getDy();
@@ -806,8 +830,8 @@ public class XYWindow extends WindowOpener implements TaskListener,
 		yAxis.setTickLabelPaint(Color.white);
 
 		XYBlockRenderer renderer = new XYBlockRenderer();
-		renderer.setBlockWidth(calc.getDx() * 0.9);
-		renderer.setBlockHeight(calc.getDy() * 0.9);
+		renderer.setBlockWidth(Math.min(10, Math.max(0.001, calc.getDx() * 0.9)));
+		renderer.setBlockHeight(Math.min(10, Math.max(0.001, calc.getDy() * 0.9)));
 
 		org.jfree.chart.renderer.LookupPaintScale paintScale = new LookupPaintScale(
 				minz, maxz, Color.gray);

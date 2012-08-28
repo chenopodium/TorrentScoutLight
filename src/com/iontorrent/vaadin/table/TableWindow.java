@@ -65,10 +65,10 @@ public class TableWindow extends WindowOpener implements Button.ClickListener,
 	MaskSelect usemask;
 	WorkThread t;
 	private BfMaskFlag bfflags[] = { BfMaskFlag.BEAD, BfMaskFlag.LIVE,
-			BfMaskFlag.LIBRARY, BfMaskFlag.KEYPASS, BfMaskFlag.DUD };
+			BfMaskFlag.LIBRARY, BfMaskFlag.KEYPASS, BfMaskFlag.POLYCLONAL };
 
-	private ScoreMaskFlag scoreflags[] = { ScoreMaskFlag.Q17LEN,
-			ScoreMaskFlag.Q47LEN, ScoreMaskFlag.INDEL, ScoreMaskFlag.MATCH };
+	private ScoreMaskFlag scoreflags[] = { ScoreMaskFlag.BF,
+			ScoreMaskFlag.Q47LEN, ScoreMaskFlag.INDEL, ScoreMaskFlag.SNR };
 
 	public TableWindow(TSVaadin app, Window main, String description, int x,
 			int y) {
@@ -152,13 +152,15 @@ public class TableWindow extends WindowOpener implements Button.ClickListener,
 		WellSelection sel = cont.getSelection();
 		// fix: if too many, still use data from well selection, just not all
 		// results!
+		int nrrows = 0;
 		if (sel != null && sel.getAllWells() != null
 				&& sel.getAllWells().size() > 0) {
 			// use the selection insead
 			int row = 0;
-			p("using well selection");
+			p("using well selection "+sel.getTitle());
 			for (WellCoordinate well : sel.getAllWells()) {
 				row = addRow(cont, row, well);
+				nrrows++;
 				if (row > 5000)
 					break;
 			}
@@ -171,6 +173,7 @@ public class TableWindow extends WindowOpener implements Button.ClickListener,
 			for (int x = x0; x < x0 + 2 * span; x++) {
 				for (int y = y0; y < y0 + 2 * span; y++) {
 					row = addRow(cont, row, new WellCoordinate(x, y));
+					nrrows++;
 				}
 			}
 		}
@@ -303,6 +306,7 @@ public class TableWindow extends WindowOpener implements Button.ClickListener,
 		mywindow.addComponent(mainhor);
 		mainhor.addComponent(ver);
 		mainhor.addComponent(table);
+		mywindow.addComponent(new Label("Nr rows in table: "+nrrows));
 
 	}
 
@@ -412,8 +416,13 @@ public class TableWindow extends WindowOpener implements Button.ClickListener,
 				}
 				app.showMessage("Loading...", "Reading all heat maps...");
 
-				mask.readAllData();
-				// in thread!
+//				private ScoreMaskFlag scoreflags[] = { ScoreMaskFlag.BF,
+//						ScoreMaskFlag.Q47LEN, ScoreMaskFlag.INDEL, ScoreMaskFlag.SNR };
+				mask.readData(ScoreMaskFlag.Q47LEN);
+				mask.readData(ScoreMaskFlag.SNR);
+				mask.readData(ScoreMaskFlag.INDEL);
+				mask.readData(ScoreMaskFlag.BF);
+				// in thread!mask.readData(ScoreMaskFlag.INDEL);
 
 				indicator.setValue(new Float(1.0));
 
@@ -435,7 +444,7 @@ public class TableWindow extends WindowOpener implements Button.ClickListener,
 
 	private int addRow(WellContext cont, int row, WellCoordinate well) {
 		int x = well.getCol();
-		int y = well.getY();
+		int y = well.getRow();
 
 		cont.loadMaskData(well);
 

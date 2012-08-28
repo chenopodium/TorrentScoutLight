@@ -297,10 +297,16 @@ public class ExperimentWindow extends WindowOpener {
 			exp.setThumbnailsRaw();
 			p("Got thumbnails, setting raw: " + exp.getRawDir());
 		}
-		// check for sff
+		// check for sff and bam files
 		if (!exp.hasBam()) {
-			String file = SequenceLoader.findFile(".bam", exp.getBasecallerDir(), false, "tf.bam", false);
-			p("Trying to find bam with sequence loader:" + file);
+			String file = SequenceLoader.findFile(".bam", exp.getBamDir(), false, "tf.bam", false);
+			p("Trying to find bam with sequence loader in bam folder:" + file);
+			if (file != null) exp.setBamFilename(new File(file).getName());
+		}
+		if (!exp.hasBam() && exp.getResultsDirectory().equals(exp.getBamDir())) {
+			exp.setBamDir(exp.getResultsDirectory());
+			String file = SequenceLoader.findFile(".bam", exp.getResultsDirectory(), false, "tf.bam", false);
+			p("Trying to find bam with sequence loader in results folder:" + file);
 			if (file != null) exp.setBamFilename(new File(file).getName());
 		}
 		if (!exp.hasSff()) {

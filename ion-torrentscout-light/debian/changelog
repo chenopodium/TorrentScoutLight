@@ -1,3 +1,40 @@
+ion-torrentscout-light (3.0.2) lucid; urgency=low
+
+  *  same version nr as plugin
+
+ -- root <Chantal Roth <chantal.roth@lifetech.com>  Wed, 20 Jun 2012 05:30:28 -0700
+
+ion-torrentscout-light (3.0.1) lucid; urgency=low
+
+  * fix for latest change such as explog.txt change
+  * need new version due to mod-jk
+
+ -- root <Chantal Roth <chantal.roth@lifetech.com>  Tue, 19 Jun 2012 06:03:07 -0700
+
+ion-torrentscout-light (2.3.8) lucid; urgency=low
+
+  * reducing memory use, initial barcode support 
+
+ -- root <Chantal Roth <chantal.roth@lifetech.com>  Sat, 16 Jun 2012 20:08:48 -0700
+
+ion-torrentscout-light (2.3.6) lucid; urgency=low
+
+  * mod jk in separate debian package 
+
+ -- root <Chantal Roth <chantal.roth@lifetech.com>  Fri, 15 Jun 2012 03:19:57 -0700
+
+ion-torrentscout-light (2.3.5) lucid; urgency=low
+
+  * db model synch
+
+ -- root <Chantal Roth <chantal.roth@lifetech.com>  Fri, 15 Jun 2012 00:35:12 -0700
+
+ion-torrentscout-light (2.3.3) lucid; urgency=low
+
+  * proton wide search 
+
+ -- root <Chantal Roth <chantal.roth@lifetech.com>  Wed, 13 Jun 2012 20:06:27 -0700
+
 ion-torrentscout-light (2.3.2) lucid; urgency=low
 
   * fixed debian install files

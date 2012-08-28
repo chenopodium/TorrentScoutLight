@@ -18,7 +18,7 @@ public class InputDialog extends Window {
         if (par.getParent() != null) parent = par.getParent();
         else parent = par;
         setCaption(question);
-        setModal(true);
+        setModal(false);
         getLayout().setSizeUndefined();
         if (name != null) tf.setValue(name);
         addComponent(tf);

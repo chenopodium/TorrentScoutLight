@@ -252,13 +252,22 @@ public class AlignWindow extends WindowOpener implements ProgressListener, TaskL
 		@Override
 		protected Void doInBackground() {
 			try {
+				p("Creating sffindex");
 				loader.createSffIndex();
+				p("Creating createWellToLocIndex");
 				loader.getSamUtils().createWellToLocIndex();
+				p("Creating createGenomeToReadIndex");
 				loader.createGenomeToReadIndex();
 				Read read = loader.getRead(coord.getCol(), coord.getRow(), null);
 
 				has = loader.hasSffIndex();
-
+				if (!has) {
+					p("Still no sff index, msg from loader: "+loader.getMsg());
+					p("sff file: "+loader.getSffFile());
+					p("exists sff file: "+loader.getSffFile().exists());
+					
+					
+				}
 				indicator.setValue(new Float(1.0));
 			} catch (Exception e) {
 				err("Got an error when computing the heat map: " + ErrorHandler.getString(e));
@@ -284,6 +293,7 @@ public class AlignWindow extends WindowOpener implements ProgressListener, TaskL
 	}
 
 	private static void err(String msg) {
+		System.out.println("AlignWindow: " + msg);
 		Logger.getLogger(AlignWindow.class.getName()).log(Level.SEVERE, msg);
 	}
 
@@ -292,7 +302,7 @@ public class AlignWindow extends WindowOpener implements ProgressListener, TaskL
 	}
 
 	private static void p(String msg) {
-		//system.out.println("AlignWindow: " + msg);
+		System.out.println("AlignWindow: " + msg);
 		Logger.getLogger(AlignWindow.class.getName()).log(Level.INFO, msg);
 	}
 }

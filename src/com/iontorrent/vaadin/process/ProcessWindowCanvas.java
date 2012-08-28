@@ -193,6 +193,7 @@ public class ProcessWindowCanvas extends WindowOpener implements Property.ValueC
 				for (BitMask m : maincont.getMasks()) {
 					if (m.getName().equalsIgnoreCase(prevmaskname)) {
 						showmask = m;
+						showmask.wakeUp();
 						break;
 					}
 				}
@@ -218,6 +219,7 @@ public class ProcessWindowCanvas extends WindowOpener implements Property.ValueC
 				// hor.addComponent(canvascurve);
 
 				showmask = usemask.getSelection();
+				showmask.wakeUp();
 				canvassub = null;
 				// p("Showmask is now: " + showmask);
 				reopen();
@@ -470,7 +472,7 @@ public class ProcessWindowCanvas extends WindowOpener implements Property.ValueC
 			return nndata;
 		}
 		try {
-
+			p("Doing nn");
 			int span = Math.max(8, maincont.getSpan());
 			p("got span: " + span);
 			maincont.getExp().setFlow(maincont.getFlow());
@@ -522,7 +524,7 @@ public class ProcessWindowCanvas extends WindowOpener implements Property.ValueC
 	private void addCanvasCurve(AbstractOrderedLayout v) {
 		// p("Creating curve image. Got Widgets: " + maincont.getWidgets());
 
-		curveimage = new CurveImage(maincont);
+		curveimage = new CurveImage(maincont, this.doNN);
 
 		curveimage.getImage();
 		String key = exp.getFileKey() + "_c_" + flow + "_" + type + "_" + coord.getX() + "_" + coord.getY() + "_"+this.doNN+"_"+this.useBg;

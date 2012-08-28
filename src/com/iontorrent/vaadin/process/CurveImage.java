@@ -34,13 +34,16 @@ public class CurveImage implements StreamResource.StreamSource {
 	int flow;
 	int frame;
 
-	public CurveImage(ExplorerContext exp) {
+	public CurveImage(ExplorerContext exp, boolean didnn) {
 		this.exp = exp;
 		if (exp != null) {
 			p("Creating Curvepanel");
 			String base = "?";
 			if (exp.getFiletype().equals(RawType.ACQ)) base = exp.getExp().getBase(exp.getFlow());
-			pan = new CurvePanel(exp, "Timeseries flow "+exp.getFlow()+"="+base);
+			String title = "Timeseries flow "+exp.getFlow()+"="+base;
+			if (didnn) title+=", nn subtracted";
+			else title+=", raw (no nn)";
+			pan = new CurvePanel(exp, title);
 			pan.setDrawFrameWidgets(false);
 			
 			

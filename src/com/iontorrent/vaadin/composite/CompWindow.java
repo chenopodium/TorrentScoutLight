@@ -64,14 +64,16 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 
 	private TSVaadin app;
 	CompositeExperiment comp;
-	BfMaskFlag flag;
+	Object flag;
+	private int searchkey;
 	int flow = 0;
 	RawType type = RawType.ACQ;
 	int frame;
 	ProgressIndicator indicator;
-	CompositeImage bfmask;
+	CompositeImage image;
 	BfHeatMap mask;
 	Embedded em;
+	Select flagsel;
 	Select sel;
 	int bucket;
 	ZoomControl zoom;
@@ -87,14 +89,17 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 	ArrayList<DatBlock> foundblocks;
 	int nrblocks;
 	boolean stopSearch;
-	
+	ScoreMaskFlag sflag;
+	ScoreMask scoremask;
+	ScoreMaskFlag curscoreflag;
+	BfMaskFlag curbfflag;
 
 	public CompWindow(TSVaadin app, Window main, String description, int x,
 			int y) {
 		super("Pick a Block (Proton)", main, description, x, y, 800, 800);
 		this.app = app;
 		this.frame = 0;
-		
+
 		bucket = 2;
 	}
 
@@ -114,27 +119,22 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 
 	public void selectBlock(DatBlock block) {
 		if (block != null) {
-			ExperimentContext exp = comp.getContext(block, false);
-			// exp.getWellContext().setCoordinate(coord);
-			// lblock.setValue("Seleced block: " + block.toShortString());
-			app.setExperimentContext(exp);
-			app.showExperiment();
+			this.showBlock(block, false);
 		}
 	}
 
-	
 	@Override
 	public void windowOpened(Window mywindow) {
 		p("Creating CompWindow ");
 		comp = app.getCompositeExperiment();
 
 		mask = BfHeatMap.getMask(comp.getRootContext());
-		if (flag == null) {
-			flag = BfMaskFlag.LIVE;
-			boolean has = mask.hasImage("composite", flag, flow, type, frame);
-			if (!has) flag = BfMaskFlag.RAW;
-			
-		}
+		p("got mask");
+		
+		scoremask =  ScoreMask.getMask(comp.getRootContext(), comp.getRootContext().getWellContext());//comp.getRootContext().getWellContext().getScoreMask();
+		p("got score mask");
+		getDefaultFlagIfNull();
+		p("Got default flag:");
 		
 		// HorizontalLayout = new HorizontalLayout();
 
@@ -154,8 +154,9 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 		sel.setImmediate(true);
 		sel.addListener(this);
 
-		Select flagsel = addFlagSelect(h);
+		flagsel = addFlagSelect(h);
 
+		p("added flags");
 		flagsel.setImmediate(true);
 		flagsel.addListener(this);
 
@@ -186,7 +187,6 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 			}
 		});
 
-		
 		VerticalLayout ver = new VerticalLayout();
 		mainhor.addComponent(ver);
 
@@ -224,9 +224,9 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 		ver.addComponent(export);
 		ver.addComponent(help);
 
-		//h.addComponent(new Label(" " + comp.getRootContext().getRawDir()));
+		// h.addComponent(new Label(" " + comp.getRootContext().getRawDir()));
 
-		boolean has = mask.hasImage("composite", flag, flow, type, frame);
+		boolean has = has(flag);
 		if (!has) {
 			// start thread
 			p("Need to compute image first, starting thread");
@@ -237,7 +237,7 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 					.setDescription("I am reading the beginning of all raw files of all Proton blocks and I am computing a composite heat map from that");
 			indicator.setPollingInterval(5000);
 			h.addComponent(filter);
-			
+
 			h.addComponent(indicator);
 			t = new WorkThread(this);
 			t.execute();
@@ -248,11 +248,37 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 			addCompView(99999);
 
 		} else {
+			
 			addCompView(10000);
 		}
 
 	}
 
+	private void getDefaultFlagIfNull() {
+		if (flag == null) {
+			flag = BfMaskFlag.LIVE;
+			this.curbfflag = (BfMaskFlag)flag;
+			this.curscoreflag = null;
+			boolean has = mask.hasImage("composite", curbfflag, flow, type, frame);
+			if (!has) {
+				flag = BfMaskFlag.RAW;
+			}
+			this.curbfflag = (BfMaskFlag)flag;
+		}
+	}
+
+	public boolean has(Object flag) {
+		if (flag instanceof BfMaskFlag) {
+			this.curbfflag = (BfMaskFlag)flag;
+			curscoreflag = null;
+			return mask.hasImage("composite", curbfflag, flow, type, frame);
+		}
+		else {
+			this.curscoreflag = (ScoreMaskFlag)flag;
+			curbfflag = null;
+			return scoremask.hasImage(curscoreflag);
+		}
+	}
 	public String getHelpMessage() {
 		String msg = "<ul>";
 		msg += "<li>Pick a bf flag in the drop down box to view a different heat map</li>";
@@ -267,7 +293,8 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 
 	private void startFilterAction() {
 		if (customtask != null) {
-			app.showMessage("Already searching", "Please wait until the current serach is done");
+			app.showMessage("Already searching",
+					"Please wait until the current serach is done");
 			return;
 		}
 		OptionsDialog input = new OptionsDialog(mywindow,
@@ -334,29 +361,30 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 										final ScoreMaskFlag customflag = ScoreMaskFlag.CUSTOM1;
 										customflag.setFilename(null);
 										calc.setFlag(customflag);
-										ScoreMaskFlag sflag = customflag;
-										sflag.setDescription("Alignment pattern  "
-												+ calc.getPatseq()
-												+ "/"
-												+ calc.getPatref()
-												+ ", flows "
-												+ start + "-" + end);
-										p("Got patrf=" + calc.getPatref()
-												+ ", gotpatseq="
-												+ calc.getPatseq());
+										sflag = customflag;
+										String flows = " all flows";
+										if (start != end)
+											flows = "flows " + start + "-"
+													+ end;
+										sflag.setDescription(calc.getPatseq()
+												+ "/" + calc.getPatref() + ", "
+												+ flows);
 										p("Got params: " + calc.toFullString());
 										stopSearch = false;
 
 										stop = new Button("Stop search");
 										stop.addListener(new Button.ClickListener() {
 											@Override
-											public void buttonClick(com.vaadin.ui.Button.ClickEvent event) {
+											public void buttonClick(
+													com.vaadin.ui.Button.ClickEvent event) {
 												stopSearch = true;
 												h.removeComponent(stop);
-												if (indicator != null) h.removeComponent(indicator);
+												if (indicator != null)
+													h.removeComponent(indicator);
 											}
 										});
 										h.addComponent(stop);
+										searchkey = (int) (Math.random() * 100);
 										customtask = new ComputeHeatMapTask(
 												calc, CompWindow.this, sflag);
 										customtask.execute();
@@ -370,8 +398,12 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 	}
 
 	private Select addFlagSelect(HorizontalLayout h) {
-		final Select flagsel = new Select();
+		flagsel = new Select();
 		for (BfMaskFlag f : BfMaskFlag.values()) {
+			flagsel.addItem(f);
+			flagsel.setItemCaption(f, f.getName());
+		}
+		for (ScoreMaskFlag f : ScoreMaskFlag.values()) {
 			flagsel.addItem(f);
 			flagsel.setItemCaption(f, f.getName());
 		}
@@ -380,7 +412,8 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 
 			@Override
 			public void valueChange(ValueChangeEvent event) {
-				flag = (BfMaskFlag) flagsel.getValue();
+				setFlag(flagsel.getValue());
+				
 				reopen();
 			}
 
@@ -390,28 +423,62 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 		h.addComponent(flagsel);
 		return flagsel;
 	}
-
+	private void setFlag(Object flag) {
+		this.flag = flag;
+		this.curbfflag = null;
+		this.curscoreflag = null;
+		if (flag instanceof ScoreMaskFlag) {
+			this.curscoreflag = (ScoreMaskFlag)flag;
+			this.flagsel.setDescription(curscoreflag.getDescription());
+		}
+		else {
+			this.curbfflag = (BfMaskFlag)flag;
+			this.flagsel.setDescription(curbfflag.getDescription());
+		}
+	}
+	private String getImageFile() {
+		String file = null;
+		if (this.curbfflag != null) {
+			file = mask.getImageFile("composite", curbfflag, flow, type, frame);			
+		}
+		else {
+			file = scoremask.getImageFile(curscoreflag);
+			
+		}
+		return file;
+	}
 	private void addCompView(int key) {
-		String file = mask.getImageFile("composite", flag, flow, type, frame);
-	//	app.showMessage(this, "Loading image " + file);
-		mask.readData(flag, file, true);
-		bfmask = new CompositeImage(comp, flag, null, flow, frame, bucket);
-
+		String file = null;
+		p("addCompView: "+key);
+		if (this.curbfflag != null) {
+			p("Got curbfflag flag "+curbfflag);
+			file = mask.getImageFile("composite", curbfflag, flow, type, frame);
+			// app.showMessage(this, "Loading image " + file);
+			mask.readData(curbfflag, file, true);
+			image = new CompositeImage(comp, curbfflag, null, flow, frame, bucket);
+		}
+		else {
+			p("Got scoreflag: "+curscoreflag);
+			file = scoremask.getImageFile(curscoreflag);
+			p("file is: "+file);
+			scoremask.readData(curscoreflag);
+		}
 		if (foundblocks != null) {
 			// mark found blocks!
-			bfmask.markBlocks(foundblocks);
+			image.markBlocks(foundblocks);
 		}
 		File f = new File(file);
-		imageresource = new StreamResource(bfmask, comp.getRootContext()
-				.getRawDir() + "_" + f.getName() + "_comp_"+key+".png", app);
+		imageresource = new StreamResource(image, comp.getRootContext()
+				.getRawDir() + "_" + f.getName() + "_comp_" + key + ".png", app);
 		imageresource.setCacheTime(300);
-		mywindow.setHeight(bfmask.getImage().getHeight() + 160 + "px");
-		mywindow.setWidth(150 + bfmask.getImage().getWidth() + "px");
-		//mainhor.setHeight(bfmask.getImage().getHeight() + 110 + "px");
-		//mainhor.setWidth(100 + bfmask.getImage().getWidth() + "px");
+		mywindow.setHeight(image.getImage().getHeight() + 160 + "px");
+		mywindow.setWidth(150 + image.getImage().getWidth() + "px");
+		// mainhor.setHeight(bfmask.getImage().getHeight() + 110 + "px");
+		// mainhor.setWidth(100 + bfmask.getImage().getWidth() + "px");
 
 		//
-		if (em != null) mainhor.removeComponent(em);
+		if (em != null)
+			mainhor.removeComponent(em);
 		em = new Embedded(null, imageresource);
 		mainhor.addComponent(em);
 
@@ -423,41 +490,14 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 				// x = x-event.getComponent().getWindow().getPositionX();
 				// y = y-event.getComponent().getWindow().getPositionY();
 				p("image clicked at: " + x + "/" + y);
-				
-				WellCoordinate coord = bfmask.getWellCoordinate(x, y);
+
+				WellCoordinate coord = image.getWellCoordinate(x, y);
 				p("Got coord: " + coord);
-				if (coord == null) return;
+				if (coord == null)
+					return;
 				DatBlock block = comp.findBlock(coord);
 				if (block != null) {
-					sel.select(block);
-					ExperimentContext exp = comp.getContext(block, false);
-					WellCoordinate rel = new WellCoordinate(coord);
-					exp.makeRelative(coord);
-					boolean hassel = block.getSel() != null
-							&& block.getSel().getNrWells() > 0;
-					if (hassel) {
-						p("Got selected wells");
-						WellSelection wellsel = block.getSel();
-						exp.getWellContext().setSelection(wellsel);						
-						rel = wellsel.getAllWells().get(0);
-						app.showMessage("Found wells", "Selecting "+wellsel.getNrWells()+" wells");
-					}
-					app.setExperimentContext(exp);
-					exp.getWellContext().setCoordinate(rel);
-					app.setWellCoordinate(rel, !hassel);
-					
-					if (hassel) {
-						app.openTable();
-						ScoreMaskWindowCanvas scorewindow = app.getScoreWindow();
-						scorewindow.setFlag(ScoreMaskFlag.CUSTOM1);
-						File file = getFileName(block, exp, false);
-						app.showMessage("Search Result", "Attempting to load search result from "+file);
-						scorewindow.open();
-						scorewindow.loadResult(file);
-					}
-					// lblock.setValue("Selected block: " +
-					// block.toShortString());
-					// app.reopenRaw();
+					showBlock(block, true);
 
 				} else {
 					p("Got no block for " + coord);
@@ -469,7 +509,63 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 				// Window.Notification.TYPE_HUMANIZED_MESSAGE);
 
 			}
+
 		});
+	}
+
+	private void showBlock(DatBlock block, boolean udpateSelection) {
+		if (udpateSelection)
+			sel.select(block);
+		ExperimentContext exp = comp.getContext(block, false);
+
+		boolean hassel = block.getSel() != null
+				&& block.getSel().getNrWells() > 0;
+
+		WellCoordinate rel = null;
+		WellSelection wellsel = block.getSel();
+		if (hassel) {
+			p("Got selected wells");
+			exp.getWellContext().setSelection(wellsel);
+			rel = wellsel.getAllWells().get(0);
+			app.showMessage("Found wells", "Selecting " + wellsel.getNrWells()
+					+ " wells");
+		}
+		app.setExperimentContext(exp);
+		if (rel != null) {
+			exp.getWellContext().setCoordinate(rel);
+			app.setWellCoordinate(rel, !hassel);
+		}
+		app.showExperiment();
+		if (hassel) {
+
+			File file = getFileName(block, exp, false);
+			p("Got read filename: " + file);
+			int nr = wellsel.getNrWells();
+			if (nr < 100)
+				app.showMessage(nr + " Proton search result",
+						"Showing wells:<br>" + wellsel.getAllWells());
+			else
+				app.showMessage(nr + " Proton search result", "Showing " + nr
+						+ "  results from Proton search");
+			if (file.exists()) {
+				ScoreMask mask = app.getScoreMask();
+				sflag.setName("Proton search");
+				sflag.setFilename(file.toString());
+				mask = app.getScoreMask();
+				double[][] data = mask.readData(sflag);
+				if (data != null && mask.getTotal(sflag) > 0) {
+					ScoreMaskWindowCanvas scorewindow = app.getScoreWindow();
+					scorewindow.setFlag(sflag);
+					scorewindow.open();
+					// scorewindow.loadResult(file, sflag);
+				}
+			}
+			app.openTable();
+
+		}
+		// lblock.setValue("Selected block: " +
+		// block.toShortString());
+		// app.reopenRaw();
 	}
 
 	private boolean createImageFileFromScoreFlag(ProgressListener progress) {
@@ -479,10 +575,11 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 		CompositeWellDensity gen = new CompositeWellDensity(comp, type, flow,
 				frame, bucket);
 		String msg = null;
-		String file = mask.getImageFile("composite", flag, flow, type, frame);
+		String file = getImageFile();
 		p("About to compute image " + file);
 		try {
-			msg = gen.createCompositeImages(progress, file, flag);
+			if (this.curbfflag != null) msg = gen.createCompositeImages(progress, file, curbfflag);
+			else msg = gen.createCompositeImages(progress, this.curscoreflag);
 			p("Image " + file + " computed");
 
 		} catch (Throwable e) {
@@ -519,7 +616,7 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 				boolean ok = createImageFileFromScoreFlag(CompWindow.this);
 				indicator.setValue(new Float(1.0));
 
-				has = mask.hasImage("composite", flag, flow, type, frame);
+				has = has(flag);
 			} catch (Exception e) {
 				err("Got an error when computing the heat map: "
 						+ ErrorHandler.getString(e));
@@ -568,7 +665,7 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 	}
 
 	private static void p(String msg) {
-		// system.out.println("CompWindow: " + msg);
+		System.out.println("CompWindow: " + msg);
 		Logger.getLogger(CompWindow.class.getName()).log(Level.INFO, msg);
 	}
 
@@ -596,14 +693,13 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 	@Override
 	public void taskDone(Task task) {
 		boolean has = task.isSuccess();
-		
+
 		if (task instanceof WorkThread) {
 			if (indicator != null) {
 				h.removeComponent(indicator);
 			}
 			if (!has) {
-				String file = mask.getImageFile("composite", flag, flow, type,
-						frame);
+				String file = getImageFile();
 
 				// mask.readData(flag, file, true);
 				app.showError(
@@ -616,34 +712,36 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 		} else {
 			customtask = (ComputeHeatMapTask) task;
 			foundblocks = customtask.getFoundBlocks();
-			
+
 			int blocks = customtask.getFoundBlocks().size();
 			globaltotal = customtask.getGlobalTotal();
 			this.nrblocks = comp.getNrBlocks();
-			p("Search done for block "+customtask.blocknr);			
+			p("Search done for block " + customtask.blocknr);
 			int block = customtask.blocknr;
 			if (customtask.blocknr >= this.nrblocks || stopSearch) {
 				if (indicator != null) {
 					h.removeComponent(indicator);
 				}
-				if (stop != null) h.removeComponent(stop);
-				app.showMessage("Proton search done",
-						"Got " + globaltotal + " search results in " + blocks
-								+ " blocks:<br>" + customtask.getFoundBlocks());
+				if (stop != null)
+					h.removeComponent(stop);
+				app.showMessage("Proton search done", "Got " + globaltotal
+						+ " search results in " + blocks + " blocks:<br>"
+						+ customtask.getFoundBlocks());
 				customtask = null;
 				addCompView(block);
-			}
-			else {
-				
-				p("Got " + customtask.total + " search results for block "+comp.getBlocks().get(block));
-				// update 
+			} else {
+
+				p("Got " + customtask.total + " search results for block "
+						+ comp.getBlocks().get(block));
+				// update
 				addCompView(block);
 				customtask = new ComputeHeatMapTask(customtask);
 				customtask.execute();
 			}
-			
+
 		}
 	}
+
 	private class ComputeHeatMapTask extends Task {
 
 		ScoreMaskCalculatorIF calc;
@@ -652,17 +750,17 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 		long globaltotal;
 		int blocknr;
 		long total;
-		
+
 		public ComputeHeatMapTask(ComputeHeatMapTask task) {
 			super(CompWindow.this);
 			this.sflag = task.sflag;
 			setProglistener((ProgressListener) CompWindow.this);
 			this.calc = task.calc;
 			this.globaltotal = task.globaltotal;
-			this.blocknr = task.blocknr+1;
+			this.blocknr = task.blocknr + 1;
 			this.foundblocks = task.foundblocks;
 		}
-		
+
 		public ComputeHeatMapTask(ScoreMaskCalculatorIF calc,
 				TaskListener tlistener, ScoreMaskFlag sflag) {
 			super(CompWindow.this);
@@ -674,7 +772,7 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 			indicator.setPollingInterval(5000);
 			h.addComponent(indicator);
 			int nrblocks = comp.getNrBlocks();
-			String time = nrblocks * 2  + " minutes";
+			String time = nrblocks * 2 + " minutes";
 			app.setTimeout(nrblocks * 10);
 			app.showTopMessage(
 					"Searching",
@@ -699,21 +797,24 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 		public Void doInBackground() {
 			try {
 				int nrblocks = comp.getNrBlocks();
-				
+
 				DatBlock block = comp.getBlocks().get(blocknr);
-				
+
 				ExperimentContext exp = comp.getContext(block, false);
 				app.setExperimentContext(exp, true);
 				ScoreMask smask = app.getScoreMask();
 				ScoreMaskGenerator gen = new ScoreMaskGenerator(smask, exp);
 				p("++++++ Searching the bam file " + exp.getBamFileName());
-				File f = new File(smask.getFile(sflag));
-				if (f.exists())
-					f.delete();
-
+				calc.setFlag(sflag);
+				File file = getFileName(block, exp, true);
+				p("Got write filename: " + file);
+				if (file != null) {
+					sflag.setFilename(file.toString());
+					if (file.exists())
+						file.delete();
+				}
 				try {
-					String msg = gen.processBamFileForCustomFlag(false,
-							calc);
+					String msg = gen.processBamFileForCustomFlag(false, calc);
 					if (msg != null && msg.length() > 0) {
 						app.showMessage("Got Message: ", msg);
 					}
@@ -738,19 +839,16 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 								.getAllCoordsWithData(sflag, 1000);
 						WellSelection sel = new WellSelection(coords);
 						block.setSel(sel);
-						sel.setTitle("Search result");
-					}
-					else block.setNrMarkedWells((int) total);
-					if (data != null) {						
-						File file = getFileName(block, exp, true);
-						sflag.setFilename(file.toString());
+						sel.setTitle(total + " results from Proton search");
+					} else
+						block.setNrMarkedWells((int) total);
+					if (data != null) {
 						gen.createImageFile(sflag, data);
 						p("Stored data in file " + file);
 					}
 				}
 				indicator.setValue(new Float(1.0 / nrblocks * blocknr));
 				// if total is small, select all wells!
-			
 
 			} catch (Exception ex) {
 				err(ErrorHandler.getString(ex));
@@ -758,30 +856,33 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 			return null;
 		}
 
-		
-
 		public boolean isSuccess() {
 			return true;
 		}
 	}
-	private File getFileName(DatBlock block, ExperimentContext exp, boolean write) {
-		String name = "/searchresult_block_"
-				+ block.getStart().getRow() + "_"
-				+ block.getStart().getCol() + ".bmp";
-		
-		File file = new File(exp.getPluginDir()+name);
-		if ((write && !file.canWrite())  || (!write && !file.exists())) {
-			file = new File(exp.getCacheDir()+name);
-		}
-		else return file;
-		if ((write && !file.canWrite())  || (!write && !file.exists())) {
-			file = new File(exp.getResultsDirectory()+name);
-		}
-		else return file;
-		if ((write && !file.canWrite())  || (!write && !file.exists())) {
-			file = new File("/tmp"+name);
-		}
-		else return file;
+
+	private File getFileName(DatBlock block, ExperimentContext exp,
+			boolean write) {
+		String name = "proton_" + exp.getFileKey() + "_" + searchkey + "_"
+				+ block.getStart().getRow() + "_" + block.getStart().getCol()
+				+ ".bmp";
+
+		File file = new File(exp.getPluginDir() + name);
+
+		if ((write && !file.canWrite()) || (!write && !file.exists())) {
+			file = new File(exp.getResultsDirectory() + name);
+		} else
+			return file;
+
+		if ((write && !file.canWrite()) || (!write && !file.exists())) {
+			file = new File(exp.getCacheDir() + name);
+		} else
+			return file;
+
+		if ((write && !file.canWrite()) || (!write && !file.exists())) {
+			file = new File("/tmp/" + name);
+		} else
+			return file;
 		return file;
 	}
 }

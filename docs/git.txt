@@ -1,0 +1,10 @@
+open command line, cd to:
+d:\inv\git\remote
+
+d:\tools\git\bin\git clone -u /home/nhomer/build/git-1.7.3.2/git-upload-pack  croth@iw.itw:/home/nhomer/git/gitrepos/trap
+
+git config remote.origin.uploadpack /home/nhomer/build/git-1.7.3.2/git-upload-pack 
+
+d:\tools\git\bin\git pull croth@iw.itw:/home/nhomer/git/gitrepos/trap
+
+Main class:
