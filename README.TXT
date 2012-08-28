@@ -1,11 +1,11 @@
 DEPENDENCIES/REQUIREMENTS:
 =========================
-- requires Tomcat (version 5 or later)
+- requires Tomcat (version 6 or later)
 
-- requires at least 3 GB of memory on the server side:
+- requires at least 4 GB of memory on the server side for PGMs and at least 8 GB on server side for Proton chips
   edit the file /etc/default/tomcat6 (or tomcat5, tomcat7)
   edit the line with JAVA_OPTS to something like:  
-  JAVA_OPTS="-Djava.awt.headless=true -Xms1024m -Xmx4096m -XX:MaxPermSize=512M"
+  JAVA_OPTS="-Djava.awt.headless=true -Xms2G -Xmx8G -XX:MaxPermSize=512M"
 
 DEPLOYMENT:
 ==========
@@ -15,10 +15,11 @@ DEPLOYMENT:
 STARTING:
 ========
 - the default url is http://yourserver:8080/TSL (if the .war file name was TSL.war)
+- if the ion-jk package is also installed, you don't need the port 8080 anymore and you can just use http://yourserver/TSL
 
 RESTART:
 =======
-- to restart, append ?restartApplication as in:  http://yourserver:8080/TSL?restartApplication
+- to restart, append ?restartApplication as in:  http://yourserver/TSL?restartApplication
 
 PASSING ARGUMENTS:
 =================
@@ -30,7 +31,7 @@ bam=R_2012_03_14_20_49_03_user_CDC-38-intp1-15-jm-r20863_Auto_CDC-38-intp1-15-jm
 sff=R_2012_03_14_20_49_03_user_CDC-38-intp1-15-jm-r20863_Auto_CDC-38-intp1-15-jm-r20863_1436_tn.sff
 
 Example:
-http://server.com:8080/TSL?restartApplication&run_name=Auto_CDC-38-intp1-15-jm-r20863_1436_tn&raw_dir=/ion-data/results/cdC/R_2012_03_14_20_49_03_user_CDC-38-intp1-15-jm-r20863/thumbnail&res_dir=/results/analysis/output/Home/Auto_CDC-38-intp1-15-jm-r20863_1436_tn_31844&bam=R_2012_03_14_20_49_03_user_CDC-38-intp1-15-jm-r20863_Auto_CDC-38-intp1-15-jm-r20863_1436_tn.bam&sff=R_2012_03_14_20_49_03_user_CDC-38-intp1-15-jm-r20863_Auto_CDC-38-intp1-15-jm-r20863_1436_tn.sff
+http://server.com/TSL?restartApplication&run_name=Auto_CDC-38-intp1-15-jm-r20863_1436_tn&raw_dir=/ion-data/results/cdC/R_2012_03_14_20_49_03_user_CDC-38-intp1-15-jm-r20863/thumbnail&res_dir=/results/analysis/output/Home/Auto_CDC-38-intp1-15-jm-r20863_1436_tn_31844&bam=R_2012_03_14_20_49_03_user_CDC-38-intp1-15-jm-r20863_Auto_CDC-38-intp1-15-jm-r20863_1436_tn.bam&sff=R_2012_03_14_20_49_03_user_CDC-38-intp1-15-jm-r20863_Auto_CDC-38-intp1-15-jm-r20863_1436_tn.sff
 
 DEVELOPMENT:
 ============
