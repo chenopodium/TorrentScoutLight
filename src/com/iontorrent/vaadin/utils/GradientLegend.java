@@ -46,8 +46,11 @@ public class GradientLegend {
     Application app;
     int height;
     int maxheight;
-    public GradientLegend(GradientPanel gradient, Recipient listener, Application app, int height, int maxheight) {    
+    int multiplier;
+    
+    public GradientLegend(int multiplier, GradientPanel gradient, Recipient listener, Application app, int height, int maxheight) {    
         this.listener = listener;
+        this.multiplier = multiplier;
         this.gradient = gradient;
         this.app = app;
         this.height = height;
@@ -57,17 +60,23 @@ public class GradientLegend {
     public WellCoordinate getCoord() {
     	return new WellCoordinate(x, y);
     }
-    
+    public void setPercent(boolean inPercent) {
+    	this.gradient.setInPercent(inPercent);
+    }
     public void addGuiElements(AbstractComponentContainer comp) {
         VerticalLayout v = new VerticalLayout();
         comp.addComponent(v);
         gradient.setBackground(Color.black);
-        gradient.setInPercent(true);
+        
         StreamResource.StreamSource imagesource = new GradientImage(gradient, 30, height );
-
-        StreamResource imageresource1 = new StreamResource(imagesource, "gradient"+gradient.hashCode()+".png", app);
+        double min = gradient.getMin()/(double)multiplier;
+		double max = gradient.getMax()/(double)multiplier;
+        String key=this.multiplier+"_"+(int)min+ "_"+(int)max+"_"+gradient.hashCode();
+        StreamResource imageresource1 = new StreamResource(imagesource, "gradient"+key+".png", app);
 		imageresource1.setCacheTime(1000);
+		
 		Embedded em = new Embedded(null, imageresource1);
+		em.setDescription("min (black): "+min+ ", max (white): "+max+", percent: "+gradient.isInPercent()+"<br>(click to change min/max)");
         v.addComponent(em);
        
         em.addListener(new ClickListener() {
@@ -86,21 +95,26 @@ public class GradientLegend {
 		v.addComponent(canvas);	
     }
     private void askForMinMax() {
+    	final double min = gradient.getMin()/(double)multiplier;
+		final double max = gradient.getMax()/(double)multiplier;
+		// needs to consider... bucket?
+	
+		
     	OptionsDialog options = new OptionsDialog(app.getMainWindow(), "Change Min or Max", "Change...", 
-				"... The minimum value (the value for black)",
-				"... The maximum value (the value for white)", 
+				"... The minimum value (the value for black, currently: "+min+")",
+				"... The maximum value (the value for white, currently: "+max+")", 
 				new OptionsDialog.Recipient() {
 
 			@Override
 			public void gotInput(final int selection) {
 				if (selection < 0) return;
 				// / do the search
-				double min = gradient.getMin();
-				double max = gradient.getMax();
+				
 				if (selection == 0) {
 					// ask for flows
 					DoubleInputDialog input = new DoubleInputDialog(app.getMainWindow(), "New minimum between "+min+"-"+max+"", new DoubleInputDialog.Recipient() {
 						public void gotInput(double val) {
+							val = val * (double)multiplier;
 							gradient.setMin((int) val);
 							// send event to listener
 							listener.minOrMaxChanged();
@@ -113,6 +127,7 @@ public class GradientLegend {
 					// ask for flows
 					DoubleInputDialog input = new DoubleInputDialog(app.getMainWindow(), "New maximum between "+min+"-"+max+"", new DoubleInputDialog.Recipient() {
 						public void gotInput(double val) {
+							val = val * (double)multiplier;
 							gradient.setMax((int) val);
 							// send event to listener
 							listener.minOrMaxChanged();

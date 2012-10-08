@@ -1,3 +1,57 @@
+ion-torrentscout-light (3.0.71) lucid; urgency=low
+
+  * normalized heatmaps
+
+ -- root <Chantal Roth <chantal.roth@lifetech.com>  Sun, 01 Jul 2012 17:26:02 -0700
+
+ion-torrentscout-light (3.0.51) lucid; urgency=low
+
+  * barcode heat maps
+
+ -- root <Chantal Roth <chantal.roth@lifetech.com>  Sun, 01 Jul 2012 15:48:31 -0700
+
+ion-torrentscout-light (3.0.11) lucid; urgency=low
+
+  * deal with missing .sff
+
+ -- root <Chantal Roth <chantal.roth@lifetech.com>  Sat, 30 Jun 2012 16:42:31 -0700
+
+ion-torrentscout-light (3.0.7) lucid; urgency=low
+
+  * 8080 fix
+
+ -- root <Chantal Roth <chantal.roth@lifetech.com>  Mon, 25 Jun 2012 17:11:14 -0700
+
+ion-torrentscout-light (3.0.10) lucid; urgency=low
+
+  * more error tolerance if apache or ion-jk is not installed
+
+ -- root <Chantal Roth <chantal.roth@lifetech.com>  Sun, 24 Jun 2012 09:46:44 -0700
+
+ion-torrentscout-light (3.0.9) lucid; urgency=low
+
+  * fixed package (prerm)
+
+ -- root <Chantal Roth <chantal.roth@lifetech.com>  Sat, 23 Jun 2012 17:00:56 -0700
+
+ion-torrentscout-light (3.0.8) lucid; urgency=low
+
+  * recommends ion-jk and not depends
+
+ -- root <Chantal Roth <chantal.roth@lifetech.com>  Sat, 23 Jun 2012 16:52:03 -0700
+
+ion-torrentscout-light (3.0.7) lucid; urgency=low
+
+  * split out plugin as separate package
+
+ -- root <Chantal Roth <chantal.roth@lifetech.com>  Sat, 23 Jun 2012 13:24:37 -0700
+
+ion-torrentscout-light (3.0.6) lucid; urgency=low
+
+  * proton heat maps
+
+ -- root <Chantal Roth <chantal.roth@lifetech.com>  Fri, 22 Jun 2012 09:45:54 -0700
+
 ion-torrentscout-light (3.0.4) lucid; urgency=low
 
   * bug fixes, memory improvments

@@ -64,7 +64,7 @@ public class BfMaskWindowCanvas extends WindowOpener implements
 			int x, int y) {
 		super("BF Heat Map", main, description, x, y, 800, 600);
 		this.app = app;
-		bucket = 5;
+		bucket = 8;
 	}
 
 	@Override
@@ -97,9 +97,9 @@ public class BfMaskWindowCanvas extends WindowOpener implements
 		exp = app.getExperimentContext();
 
 		if (oldexp == null || exp != oldexp) {
-			if (exp.is318())
+			if (exp.is318() || exp.getNrrows()>3000)
 				bucket = 15;
-			else if (exp.is316())
+			else if (exp.is316() || exp.getNrrows()>2000)
 				bucket = 10;
 			else if (exp.isThumbnails() || exp.getNrrows()<1000)
 				bucket = 4;
@@ -214,7 +214,8 @@ public class BfMaskWindowCanvas extends WindowOpener implements
 
 		hcan.addComponent(vzoom);
 		final GradientPanel grad = bfmask.getGradient();
-		GradientLegend leg = new GradientLegend(grad,
+		grad.setInPercent(true);
+		GradientLegend leg = new GradientLegend(this.bucket*bucket, grad,
 				new GradientLegend.Recipient() {
 
 					@Override

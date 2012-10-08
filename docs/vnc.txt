@@ -1,0 +1,63 @@
+
+vncserver -kill :97
+rm -f /tmp/X97-lock
+rm -f /tmp/X11-unix/X97
+vncserver :97 -geometry 1900x1200 -depth 24 &
+
+
+To run TorrentScout via VNC (say on display 55)
+
+
+vncserver :11 -geometry 1600x1200 -depth 24 &
+vncserver :55 -geometry 1600x1200 -depth 24 &
+vncserver :77 -geometry 1600x1200 -depth 24 &
+vncserver :88 -geometry 1600x1200 -depth 24 &
+
+1. start a vnc server on rnd1 as ionadmin
+
+Example for rnd1.ite:5955
+vncserver :55 -geometry 1600x1200 -depth 24 &
+
+(I may have already started one that you can use!)
+
+(To set the password: vncserver /.vnc/passwd)
+
+2. To check if it is running:
+ps -eaf | grep vnc (and then check for your port number)
+
+3. To clean up VNC (in case vnc stopped for some reason but didn't do so completely)
+
+
+rm /tmp/.X11-lock
+rm /tmp/.X11-unix/X11
+
+
+rm /tmp/X55-lock
+rm /tmp/X11-unix/X55
+
+3.a) to Kill it gracefully: vncserver -kill :55
+
+4. To connect to it from any client machine via ultra vnc:
+
+rnd1.ite:5955
+
+Password as specfied in the /.vnc/passwd
+(vncserver /.vnc/passwd)
+
+5. To make copy paste work from unix to Windows via vnc:
+
+a) log into rnd1 via VNC client as above
+b) open a terminal window via the same VNC client session
+c) type: autocutsel -s PRIMARY -fork
+d) after that, copy/paste from unix to Windows should work.
+
+6. To Start Torrent Scout on rnd1
+
+a) open a terminal
+b) type ./torrentscout.sh (for the currently officially deployed version)
+   type ./runtomcat.sh (for my *test* version, which may or mah not work :-)
+
+Please let me know if you have any questions :-)
+
+Best wishes,
+Chantal

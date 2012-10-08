@@ -75,8 +75,9 @@ public class FitWindowCanvas extends WindowOpener {
 	StatPoint datapoints;
 	double[][] histodata;
 	boolean addToHist;
-	  StreamResource imageresource;
+	StreamResource imageresource;
 
+	static final int MAX_RASTER = 400;
 	public FitWindowCanvas(TSVaadin app, Window main, String description, int x, int y) {
 		super("Fit (create masks)", main, description, x, y, 800, 500);
 		this.app = app;
@@ -93,6 +94,11 @@ public class FitWindowCanvas extends WindowOpener {
 		}
 		exp = app.getExperimentContext();
 		maincont = app.getExplorerContext();
+		if (maincont.getRasterSize()>MAX_RASTER) {
+			// make smaller
+			app.showMessage("Using smaller area", "I am reducing the visible chip size to "+MAX_RASTER+", otherwise there could be an out of memory error :-)");
+			maincont.setRasterSize(MAX_RASTER);
+		}
 		RasterData data = maincont.getData();
 
 		if (data == null) {

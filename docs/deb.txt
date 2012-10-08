@@ -1,0 +1,10 @@
+scp ion-torrentscout-light_3.0.1_amd64.deb ionadmin@
+
+scp ionadmin@rnd1.ite:ion-torrentscout-light_3.0.1_amd64.deb .
+
+sudo apt-get install ion-jk
+
+sudo dpkg --install --auto-deconfigure ion-jk_3.0.1_amd64.deb
+sudo dpkg --install ion-torrentscout-light_3.0.4_amd64.deb
+
+

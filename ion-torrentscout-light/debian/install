@@ -1,5 +1,5 @@
 ./TSL.war /var/lib/tomcat6/webapps/
 ./torrentscout.war /var/lib/tomcat6/webapps/
 ./internal.war /var/lib/tomcat6/webapps/
-./torrentscout /results/plugins
 ./LogServlet.war /var/lib/tomcat6/webapps/
+./ion-tsl.conf /etc/apache2/conf.d/

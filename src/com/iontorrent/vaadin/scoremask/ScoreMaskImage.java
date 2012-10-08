@@ -50,7 +50,7 @@ public class ScoreMaskImage implements StreamResource.StreamSource {
             	p("Don't have image for flag "+flag+" yet");
             }
            
-           pan.setScoreMask(mask, flag,  bucket);
+           pan.setScoreMask(mask, flag,  bucket, 0);
  
         }
     }
@@ -79,6 +79,7 @@ public class ScoreMaskImage implements StreamResource.StreamSource {
     public RenderedImage getImage() {
     	if (image == null) {
     		 /* Create an image and draw something on it. */
+    		pan.getGradient().setInPercent(false);
             image = pan.myCreateImage(500, 500);
           
     	}

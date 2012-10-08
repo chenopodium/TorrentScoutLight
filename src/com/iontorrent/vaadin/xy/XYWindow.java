@@ -455,7 +455,12 @@ public class XYWindow extends WindowOpener implements TaskListener,
 		app.showMessage(this, "Computing 2D map of " + a + " and " + b);
 
 		calc = new XYCalculator(maskselect.getSelectedMask(), app.getScoreMask(), a, b, 40);
-		calc.compute();
+		try {
+			calc.compute();
+		}
+		catch (Exception e) {
+			err(ErrorHandler.getString(e));
+		}
 		p("Computation result: " + calc);
 		this.intersection = calc.getIntersection();
 		p("Got intersection: " + intersection.getTotalSub(maincont.getRasterSize()));
@@ -567,8 +572,10 @@ public class XYWindow extends WindowOpener implements TaskListener,
 						// double y = flagb.getRealValue(b.getValue(c, r));
 
 						if (bitmask == null || bitmask.get(c, r)) {
-							double x = flaga.getRealValue((int) a[c][r]);
-							double y = flagb.getRealValue((int) b[c][r]);
+							double x = a[c][r];
+							double y = b[c][r];
+							//double x = flaga.getRealValue((int) a[c][r]);
+							//double y = flagb.getRealValue((int) b[c][r]);
 							// values must not be too large
 							if (x < MAX_VALUE && y < MAX_VALUE) {
 								inter.set(c, r, true);
@@ -1039,6 +1046,7 @@ public class XYWindow extends WindowOpener implements TaskListener,
 	}
 
 	private static void err(String msg) {
+		System.out.println("!XYWindow: " + msg);
 		Logger.getLogger(XYWindow.class.getName()).log(Level.SEVERE, msg);
 	}
 
@@ -1047,7 +1055,7 @@ public class XYWindow extends WindowOpener implements TaskListener,
 	}
 
 	private static void p(String msg) {
-		// System.out.println("MaskWindowCanvas: " + msg);
+		System.out.println("XYWindow: " + msg);
 		Logger.getLogger(XYWindow.class.getName()).log(Level.INFO, msg);
 	}
 

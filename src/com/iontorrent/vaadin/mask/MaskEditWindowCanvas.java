@@ -12,6 +12,7 @@ import java.util.logging.Logger;
 import com.iontorrent.expmodel.CompositeExperiment;
 import com.iontorrent.expmodel.DatBlock;
 import com.iontorrent.expmodel.ExperimentContext;
+import com.iontorrent.rawdataaccess.wells.BfMask;
 import com.iontorrent.rawdataaccess.wells.BfMaskFlag;
 import com.iontorrent.rawdataaccess.wells.BitMask;
 import com.iontorrent.torrentscout.explorer.ExplorerContext;
@@ -21,6 +22,7 @@ import com.iontorrent.torrentscout.explorer.edit.OperationFactory;
 import com.iontorrent.vaadin.TSVaadin;
 import com.iontorrent.vaadin.fit.FitWindowCanvas;
 import com.iontorrent.vaadin.process.ProcessWindowCanvas;
+import com.iontorrent.vaadin.utils.AreaSelect;
 import com.iontorrent.vaadin.utils.CoordSelect;
 import com.iontorrent.vaadin.utils.ExportTool;
 import com.iontorrent.vaadin.utils.FileBrowserWindow;
@@ -58,12 +60,13 @@ import com.vaadin.ui.Window;
  * 
  * @author Chantal Roth chantal.roth@lifetech.com
  */
-public class MaskEditWindowCanvas extends WindowOpener implements Property.ValueChangeListener,  Button.ClickListener  {
+public class MaskEditWindowCanvas extends WindowOpener implements Property.ValueChangeListener, Button.ClickListener {
 
 	private TSVaadin app;
 	CoordSelect coordsel;
 	ExplorerContext maincont;
 	ExperimentContext exp;
+	ExperimentContext oldexp;
 	MaskSelect maskselect;
 	MaskCommandParser parser;
 	MaskSelect sela;
@@ -90,19 +93,21 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 	Component selectedtab = null;
 	int bucket;
 	ZoomControl zoom;
-	
+
 	public MaskEditWindowCanvas(TSVaadin app, Window main, String description, int x, int y) {
-		super("Edit masks and export", main, description, x, y, 490, 550);
+		super("Edit masks and export", main, description, x, y, 490, 500);
 		this.app = app;
-		bucket =1;
+		bucket = 0;
 
 	}
 
 	@Override
 	public void openButtonClick(Button.ClickEvent event) {
-		if (!super.checkExperimentOpened()) return;
-		
+		if (!super.checkExperimentOpened())
+			return;
+
 		exp = app.getExperimentContext();
+
 		maincont = app.getExplorerContext();
 		maincont.setAbsCenterAreaCoord(exp.getWellContext().getAbsoluteCoordinate());
 		super.openButtonClick(event);
@@ -114,23 +119,34 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 		p("Center Coord: " + maincont.getAbsCenterAreaCoord());
 		// p("Curmask: "+curmask);
 		String name = null;
-		if (curmask != null) name = curmask.getName();
+		if (curmask != null)
+			name = curmask.getName();
 		if (curmask == null || !curmask.getRelCoord().equals(maincont.getRelativeCorner())) {
-			if (name == null) name = "keypass";
+			if (name == null)
+				name = "keypass";
 			if (curmask != null) {
 				p("Mask corner coord " + curmask.getRelCoord() + " is not same as corner" + maincont.getRelativeCorner());
 			}
 			p("Need to find new curmask, ideally " + name);
 			if (maincont.getMasks() != null && maincont.getMasks().size() > 0) {
 				curmask = find(name, true);
-				if (curmask == null)curmask = find(name, false);
-				if (curmask == null) curmask = maincont.getMasks().get(0);
+				if (curmask == null)
+					curmask = find(name, false);
+				if (curmask == null)
+					curmask = maincont.getMasks().get(0);
 			}
 		}
-		if (curmask != null) curmask.wakeUp();
+		if (curmask != null)
+			curmask.wakeUp();
 		p("Curmask is now: " + curmask);
 		maincont.setPreferrednrwidgets(5);
 
+		if (oldexp == null || exp != oldexp) {
+			bucket = 0;
+		}
+		
+		
+		oldexp = exp;
 		createGui();
 
 	}
@@ -138,111 +154,123 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 	private void saveFile(boolean ask) {
 		File f = new File("/tmp/mymask.mask");
 		app.logModule(getName(), "save mask");
-		if (savefile != null) f = new File(savefile);
-				
-			FileBrowserWindow browser = new FileBrowserWindow("Pick a .mask file", null, new FileBrowserWindow.Recipient() {
-				@Override
-				public void fileSelected(File file) {
-					p("Got file:"+file);
-					if (file != null && !file.isDirectory()) {
-						String msg = maincont.storeContext(file.toString());
-						if (msg == null || msg.length()<1) {
-							app.showMessage("Saved", "Stored all masks in file "+file);
-						}
-						else app.showMessage("Problem", "Could not save to file "+file+"<br>"+msg);
-					}
-					else app.showMessage("Not saving", "Won't save to file "+file);
-					
+		if (savefile != null)
+			f = new File(savefile);
+
+		FileBrowserWindow browser = new FileBrowserWindow("Pick a .mask file", null, new FileBrowserWindow.Recipient() {
+			@Override
+			public void fileSelected(File file) {
+				p("Got file:" + file);
+				if (file != null && !file.isDirectory()) {
+					String msg = maincont.storeContext(file.toString());
+					if (msg == null || msg.length() < 1) {
+						app.showMessage("Saved", "Stored all masks in file " + file);
+					} else
+						app.showMessage("Problem", "Could not save to file " + file + "<br>" + msg);
+				} else
+					app.showMessage("Not saving", "Won't save to file " + file);
+
+			}
+
+			public boolean allowInList(File f, boolean toSave) {
+				if (f == null)
+					return false;
+				if (f.isDirectory()) {
+					if (!f.canRead())
+						return false;
+					String dir = f.getAbsolutePath().toString();
+					if (dir.startsWith("/") || dir.startsWith("\""))
+						dir = dir.substring(1);
+					if (dir.startsWith("etc/") || dir.startsWith("init.d/"))
+						return false;
 				}
-				public boolean allowInList(File f, boolean toSave) {
-					if (f == null) return false;
-					if (f.isDirectory()) {
-						if (!f.canRead()) return false;
-						String dir= f.getAbsolutePath().toString();
-						if (dir.startsWith("/") || dir.startsWith("\"")) dir = dir.substring(1);
-						if (dir.startsWith("etc/")|| dir.startsWith("init.d/")) return false;
-					}
-					
-					return true;
-				}
-				
-			}, FileBrowserWindow.SAVE, mywindow, f, ".mask");
-			browser.open();
-	}
-	private void openFile(boolean ask) {
-		File f = new File("/tmp/mymasks.mask");
-		if (savefile != null) f = new File(savefile);
-				
-			FileBrowserWindow browser = new FileBrowserWindow("Pick a .mask file", null,  new FileBrowserWindow.Recipient() {
-				@Override
-				public void fileSelected(File file) {
-					p("Got file:"+file);
-					if (file != null && file.isFile()) {
-						p("++++++++++++++++++++++ loading context+++++++++++++++++++++");
-						String msg = maincont.loadContext(file.toString());
-						int x = maincont.getRelativeCenterAreaCoord().getCol();
-						int y = maincont.getRelativeCenterAreaCoord().getRow();
-						int r = maincont.getRasterSize()/2;
-						if (maincont.getWidgets()!= null) maincont.getWidgets().clear();
-						x = Math.max(0, x-r);
-						y = Math.max(0, y-r);
-						//maincont.setRelDataAreaCoord(new WellCoordinate(x, y));
-						p("Got ExpCoord: "+maincont.getExp().getWellContext().getCoordinate());						
-						p("Got center: "+maincont.getRelativeCenterAreaCoord());
-						p("Got mask corner coord: "+maincont.getMasks().get(0).getRelCoord());
-						ProcessWindowCanvas process = app.getProcessWindow();
-						p("Got coord in process: "+process.getCoord());
-						//p("Got mask coord: "+maincont.getd);
-						ArrayList<BitMask> masks = maincont.getMasks();
-						process.clear();
-						process.loadData();
-						curmask = null;											
-						app.reopenProcess(false);
-						p("++++++++++++++++++++++ SETTING MASKS");
-						maincont.setMasks(masks);
-						String names = "";
-						for (BitMask m: maincont.getMasks()) {
-							p("Got: "+m.getName());
-						}	
-						maincont.setMasks(masks);
-						app.reopenProcess(false);
-						reopen();						
-						app.reopenAutomate();
-						
-						if (msg == null || msg.length()<1) {
-							 names = "";
-							for (BitMask m: maincont.getMasks()) {
-								names+=m.getName()+"<br>";
-							}							
-							app.showLongMessage("Loaded", "Loaded all masks at "+maincont.getAbsCenterAreaCoord()+" from file "+file+"<br>"+names);							
-							
-						}
-						else app.showMessage("Problem", "Could not load masks from file "+file+"<br>"+msg);
-						p("+++++++++++++++++++++ loading context DONE +++++++++++++++++++++");
-					}
-					
-				}
-				public boolean allowInList(File f, boolean toSave) {
-					if (f == null) return false;
-					if (f.isDirectory()) {
-						if (!f.canRead()) return false;
-						String dir= f.getAbsolutePath().toString();
-						if (dir.startsWith("/") || dir.startsWith("\"")) dir = dir.substring(1);
-						if (dir.startsWith("etc/")|| dir.startsWith("init.d/")) return false;
-					}
-					
-					return true;
-				}
-				
-			},mywindow, f, ".mask");
-			browser.open();
+
+				return true;
+			}
+
+		}, FileBrowserWindow.SAVE, mywindow, f, ".mask");
+		browser.open();
 	}
 
+	private void openFile(boolean ask) {
+		File f = new File("/tmp/mymasks.mask");
+		if (savefile != null)
+			f = new File(savefile);
+
+		FileBrowserWindow browser = new FileBrowserWindow("Pick a .mask file", null, new FileBrowserWindow.Recipient() {
+			@Override
+			public void fileSelected(File file) {
+				p("Got file:" + file);
+				if (file != null && file.isFile()) {
+					p("++++++++++++++++++++++ loading context+++++++++++++++++++++");
+					String msg = maincont.loadContext(file.toString());
+					int x = maincont.getRelativeCenterAreaCoord().getCol();
+					int y = maincont.getRelativeCenterAreaCoord().getRow();
+					int r = maincont.getRasterSize() / 2;
+					if (maincont.getWidgets() != null)
+						maincont.getWidgets().clear();
+					x = Math.max(0, x - r);
+					y = Math.max(0, y - r);
+					// maincont.setRelDataAreaCoord(new WellCoordinate(x, y));
+					p("Got ExpCoord: " + maincont.getExp().getWellContext().getCoordinate());
+					p("Got center: " + maincont.getRelativeCenterAreaCoord());
+					p("Got mask corner coord: " + maincont.getMasks().get(0).getRelCoord());
+					ProcessWindowCanvas process = app.getProcessWindow();
+					p("Got coord in process: " + process.getCoord());
+					// p("Got mask coord: "+maincont.getd);
+					ArrayList<BitMask> masks = maincont.getMasks();
+					process.clear();
+					process.loadData();
+					curmask = null;
+					app.reopenProcess(false);
+					p("++++++++++++++++++++++ SETTING MASKS");
+					maincont.setMasks(masks);
+					String names = "";
+					for (BitMask m : maincont.getMasks()) {
+						p("Got: " + m.getName());
+					}
+					maincont.setMasks(masks);
+					app.reopenProcess(false);
+					reopen();
+					app.reopenAutomate();
+
+					if (msg == null || msg.length() < 1) {
+						names = "";
+						for (BitMask m : maincont.getMasks()) {
+							names += m.getName() + "<br>";
+						}
+						app.showLongMessage("Loaded", "Loaded all masks at " + maincont.getAbsCenterAreaCoord() + " from file " + file + "<br>" + names);
+
+					} else
+						app.showMessage("Problem", "Could not load masks from file " + file + "<br>" + msg);
+					p("+++++++++++++++++++++ loading context DONE +++++++++++++++++++++");
+				}
+
+			}
+
+			public boolean allowInList(File f, boolean toSave) {
+				if (f == null)
+					return false;
+				if (f.isDirectory()) {
+					if (!f.canRead())
+						return false;
+					String dir = f.getAbsolutePath().toString();
+					if (dir.startsWith("/") || dir.startsWith("\""))
+						dir = dir.substring(1);
+					if (dir.startsWith("etc/") || dir.startsWith("init.d/"))
+						return false;
+				}
+
+				return true;
+			}
+
+		}, mywindow, f, ".mask");
+		browser.open();
+	}
 
 	private void createGui() {
 		tabsheet = new TabSheet();
-		
-		
+
 		tabsheet.setWidth("450px");
 		tabsheet.setHeight("450px");
 
@@ -268,18 +296,23 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 		tabsheet.getTab(helpLayout).setCaption("Help");
 
 		addEditorGui(editLayout);
-		
+
 		addCalcGui(calcLayout);
 		addPickGui(pickLayout);
 		addHelpGui(helpLayout);
 
-		if (selectedtab == null) selectedtab = editLayout;
+		if (selectedtab == null)
+			selectedtab = editLayout;
 		if (selectedtab != null) {
 			p("createGui Got selectedtab:" + selectedtab);
-			if (selectedtab == editLayout) p("createGui Got edit layout by default");
-			else if (selectedtab == pickLayout) p("createGui Got pick layout by default");
-			else if (selectedtab == calcLayout) p("createGui Got calc layout");
-			else selectedtab = editLayout;
+			if (selectedtab == editLayout)
+				p("createGui Got edit layout by default");
+			else if (selectedtab == pickLayout)
+				p("createGui Got pick layout by default");
+			else if (selectedtab == calcLayout)
+				p("createGui Got calc layout");
+			else
+				selectedtab = editLayout;
 			tabsheet.setImmediate(true);
 			tabsheet.setSelectedTab(selectedtab);
 
@@ -291,10 +324,13 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 			public void selectedTabChange(SelectedTabChangeEvent event) {
 				selectedtab = tabsheet.getSelectedTab();
 				p("selectedTabChange tab: " + selectedtab);
-				if (selectedtab == editLayout) p("selectedTabChange Got edit layout by default");
-				else if (selectedtab == pickLayout) p("selectedTabChange Got pick layout by default");
-				else if (selectedtab == calcLayout) p("selectedTabChange Got calc layout");
-				//else selectedtab = editLayout;
+				if (selectedtab == editLayout)
+					p("selectedTabChange Got edit layout by default");
+				else if (selectedtab == pickLayout)
+					p("selectedTabChange Got pick layout by default");
+				else if (selectedtab == calcLayout)
+					p("selectedTabChange Got calc layout");
+				// else selectedtab = editLayout;
 			}
 
 		});
@@ -337,15 +373,21 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 		// for (BitMask m: maincont.getMasks()) {
 		// p(m.getName());
 		// }
-		if (maska == null) maska = find("bead", false);
-		if (maska == null) maska = curmask;
-		if (maskb == null) maskb = find("dud", false);
-		if (maskb == null) maskb = masks.get(1);
+		if (maska == null)
+			maska = find("bead", false);
+		if (maska == null)
+			maska = curmask;
+		if (maskb == null)
+			maskb = find("dud", false);
+		if (maskb == null)
+			maskb = masks.get(1);
 
+		if (curmask != null) maska = curmask;
 		sela = new MaskSelect("first", null, "First argument", maincont, -1, null, maska);
 		selb = new MaskSelect("second", null, "Second argument (depends on type of operation)", maincont, -1, null, maskb);
 		selc = new MaskSelect("result", null, "Resulting mask", maincont, -1, null, null);
 
+		
 		sela.addGuiElements(hor);
 
 		selop = new Select();
@@ -409,13 +451,12 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 				}
 
 				curmask = selc.getSelection();
-				
+
 				if (curmask != null) {
 					curmask.wakeUp();
 					compute(a, b, curmask);
-					
-				}
-				else {
+
+				} else {
 					InputDialog input = new InputDialog(mywindow, "Name of result mask: ", new Recipient() {
 
 						@Override
@@ -445,10 +486,13 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 		text = new TextArea();
 		text.setWidth("430px");
 		text.setHeight("70px");
-		if (lastcalc != null) text.setValue(lastcalc);
-		else
+		if (lastcalc != null)
+			text.setValue(lastcalc);
+		else {
 			text.setValue("bgmask = empty and (not pinned)");
-
+			
+			//text.setValue("bad = dud add ambiguous add ");
+		}
 		text.setImmediate(true);
 		ver.addComponent(text);
 
@@ -462,6 +506,7 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 			@Override
 			public void buttonClick(ClickEvent event) {
 				String cmd = (String) text.getValue();
+				lastcalc = cmd;
 				String msg = "<html>" + getHelpText() + "</html>";
 				if (cmd == null || cmd.length() < 1) {
 
@@ -473,11 +518,15 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 						err("Mask has no name: " + m);
 					}
 				}
+				BfMask mask = maincont.getExp().getWellContext().getBarcodeMask();
+				mask.getMaskAt(0, 0);
+				
 				parser = new MaskCommandParser(maincont);
-				app.logModule(getName(), "parsing "+cmd);
+				app.logModule(getName(), "parsing " + cmd);
 				String err = parser.doParseAction(cmd);
 				curmask = parser.getResult();
-				if (err != null) app.showMessage("Mask Editor", err);
+				if (err != null)
+					app.showMessage("Mask Editor", err);
 				reopen();
 				tabsheet.setSelectedTab(editLayout);
 
@@ -491,7 +540,8 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 
 	private String removeFirstPart(String n) {
 		int pos = n.indexOf(" ");
-		if (pos > -1) return n.substring(pos).trim();
+		if (pos > -1)
+			return n.substring(pos).trim();
 		else
 			return n;
 	}
@@ -509,11 +559,15 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 
 		lastcalc = msg;
 		p("Computing: " + msg);
-		app.logModule(getName(), "compute "+msg);
+		app.logModule(getName(), "compute " + msg);
 		app.showMessage(this, msg);
-		boolean ok = op.execute(a, b, c);
-		if (!ok) {
-			app.showError(this, "Calculation failed");
+		String err = op.execute(a, b, c);
+		if (err==null) {
+			String sizes = "";
+			if (a != null) sizes +=", a:"+a.getNrCols()+"/"+a.getNrRows();
+			if (b != null) sizes +=", b:"+b.getNrCols()+"/"+b.getNrRows();
+			if (c != null) sizes +=", c:"+c.getNrCols()+"/"+c.getNrRows();
+			app.showError(this, "Calculation failed because: "+err+",<br>sizes: "+sizes);
 		}
 		// maincont.maskChanged(c);
 
@@ -527,54 +581,41 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 
 		maskselect.addGuiElements(hor);
 
-		final Select rastersel = new Select();
-		rastersel.setImmediate(true);
-		rastersel.setDescription("Pick the size of the area visible in the mask editor. Note that calculations are always done on the ENTIRE mask");
-		rastersel.addItem("25 x 25");
-		rastersel.addItem("50 x 50");
-		rastersel.addItem("100 x 100");
-		rastersel.addItem("200 x 200");
-		rastersel.addItem("400 x 400");
-		rastersel.addItem("800 x 800");
-		
-		rastersel.setWidth("100px");
 		int size = maincont.getRasterSize();
-		rastersel.select(size+" x "+size);
-		rastersel.addListener(new Select.ValueChangeListener() {
-
+		
+		AreaSelect rastersel = new AreaSelect(app, maincont, new Select.ValueChangeListener() {
 			@Override
-			public void valueChange(ValueChangeEvent event) {
-				String val = ""+rastersel.getValue();
-				int size = 100;
-				try {
-					val = val.substring(0,3).trim();
-					size = Integer.parseInt(val);
-					if (size != maincont.getRasterSize()) {
-						maincont.setRasterSize(size);
-						p("Got change in rastersize: "+size);
-						selectedtab = editLayout;
-						reopen();
-						app.reopenProcess(false);
-						app.reopenFit();
-						
-					}
-				}	
-				catch (Exception e) {
-					p("Could not parse: "+val);					
-				}
+			public void valueChange(ValueChangeEvent event) {					
+				selectedtab = editLayout;
+				reopen();
 				
 			}
-
-		});
-
-		hor.addComponent(new Label(" Area:"));
-		hor.addComponent(rastersel);
-
-		coordsel = new CoordSelect(exp.getWellContext().getCoordinate().getX() + exp.getColOffset(), exp.getWellContext().getCoordinate().getY()  + exp.getRowOffset(), this);
-		coordsel.addGuiElements(hor);
+		}, -1);
+		rastersel.addComponents(hor);
 		
+		if (bucket == 0) {
+			if (size <= 400) bucket = 1;
+			else if (size <= 800) bucket = 2;
+			else if (size <= 1400) bucket = 5;
+			else if (size <= 2800) bucket = 10;
+			else bucket = 15;
+		}
 	
-		
+		coordsel = new CoordSelect(exp.getWellContext().getCoordinate().getX() + exp.getColOffset(), exp.getWellContext().getCoordinate().getY() + exp.getRowOffset(), this);
+		coordsel.addGuiElements(hor);
+
+		Button addwin = new Button("Add window");
+		addwin.setDescription("Open another window like this one");
+		addwin.setIcon(new ThemeResource("img/addwindow.png"));		
+		addwin.addListener(new Button.ClickListener() {
+			public void buttonClick(Button.ClickEvent event) {
+				int x= location_x+100;
+				int y= location_y+50;
+				if (x > 900) x = 1;
+				app.createMaskEditWindow(x, y, true);
+			}
+		});
+		hor.addComponent(addwin);
 		
 		final NativeButton open = new NativeButton();
 		open.setStyleName("nopadding");
@@ -587,8 +628,8 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 			}
 
 		});
-		//hor.addComponent(open);
-		
+		// hor.addComponent(open);
+
 		final NativeButton export = new NativeButton();
 		export.setStyleName("nopadding");
 		export.setIcon(new ThemeResource("img/export.png"));
@@ -600,7 +641,7 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 			}
 
 		});
-		//hor.addComponent(export);
+		// hor.addComponent(export);
 		v.addComponent(hor);
 
 		HorizontalLayout otherhor = new HorizontalLayout();
@@ -609,25 +650,25 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 			@Override
 			public void buttonClick(com.vaadin.ui.Button.ClickEvent event) {
 				bucket = zoom.getBucket();
-				//bfmask = null;
+				// bfmask = null;
 				reopen();
 			}
 		});
-		
+
 		vzoom.addComponent(open);
 		vzoom.addComponent(export);
 		zoom.addGuiElements(vzoom);
 		otherhor.addComponent(vzoom);
-		
+
 		v.addComponent(otherhor);
 
 		// maybe add a second mask?
 		addMaskPanel(otherhor, curmask);
-		
-		
+
 		// addMaskPanel(hor, curmask);
 
 	}
+
 	public void buttonClick(Button.ClickEvent event) {
 		int x = coordsel.getX();
 		int y = coordsel.getY();
@@ -639,10 +680,9 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 		app.reopenRaw();
 		app.reopenProcess(false);
 	}
+
 	public void doExportAction() {
-		OptionsDialog input = new OptionsDialog(mywindow,
-				"What would you like to export?", "Export...",
-				"... save masks to file", "... other data such as raw data, ionograms, alignments",
+		OptionsDialog input = new OptionsDialog(mywindow, "What would you like to export?", "Export...", "... save masks to file", "... other data such as raw data, ionograms, alignments",
 				new OptionsDialog.Recipient() {
 
 					@Override
@@ -652,7 +692,7 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 						// / do the search
 						if (selection == 0) {
 							saveFile(true);
-						} else{ 
+						} else {
 							ExportTool export = new ExportTool(app, mywindow, curmask, hor);
 							export.doExportAction();
 
@@ -661,8 +701,9 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 
 				});
 	}
+
 	private BitMask find(String name, boolean strict) {
-		return maincont.find(name, strict);		
+		return maincont.find(name, strict);
 	}
 
 	private void addHelpGui(AbstractOrderedLayout v) {
@@ -701,7 +742,8 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 		use.addGuiElements(lay);
 
 		v.addComponent(lay);
-		v.addComponent(new Label("Notes: <br>The signal mask is used in Automate to compute the mean signal<br>The background mask is the one used in Process for NN bg subtraction", Label.CONTENT_XHTML));
+		v.addComponent(new Label("Notes: <br>The signal mask is used in Automate to compute the mean signal<br>The background mask is the one used in Process for NN bg subtraction",
+				Label.CONTENT_XHTML));
 
 	}
 
@@ -709,29 +751,27 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 		p("Creating bitmask image with " + curmask + " at coord " + curmask.getRelCoord());
 		final MaskImage mimage = new MaskImage(maincont, curmask, bucket);
 
-		StreamResource imageresource = new StreamResource((StreamResource.StreamSource) mimage, 
-				exp.getFileKey() + "_" + exp.getWellContext().getAbsoluteCoordinate().getX() + "_" + 
-		exp.getWellContext().getAbsoluteCoordinate().getY() + curmask.getName()+"_"+maincont.getRasterSize()+"_" + (int) (Math.random() * 1000) + ".png", app);
+		StreamResource imageresource = new StreamResource((StreamResource.StreamSource) mimage, exp.getFileKey() + "_" + exp.getWellContext().getAbsoluteCoordinate().getX() + "_"
+				+ exp.getWellContext().getAbsoluteCoordinate().getY() + curmask.getName() + "_" + maincont.getRasterSize() + "_" + (int) (Math.random() * 1000) + ".png", app);
 		imageresource.setCacheTime(100);
 		// app.getMainWindow().open(imageresource, "_blank");
-		int width= Math.max(mimage.getImage().getWidth()+100, 600);
-		int height= Math.max(mimage.getImage().getHeight()+200, 350);
-		mywindow.setHeight(height+ 200 + "px");
-		mywindow.setWidth(width+ "px");
+		int width = Math.max(mimage.getImage().getWidth() + 100, 600);
+		int height = Math.max(mimage.getImage().getHeight() + 200, 350);
+		mywindow.setHeight(height + 200 + "px");
+		mywindow.setWidth(width + "px");
 		tabsheet.setWidth(width + "px");
-		tabsheet.setHeight(height+ 200 + "px");
+		tabsheet.setHeight(height + 200 + "px");
 		// imageresource.
-		
-		
+
 		canvasmask = new Canvas();
 		// canvashist.setImmediate(true);
 		canvasmask.setBackgroundColor("black");
-		canvasmask.setHeight((mimage.getImage().getHeight()+100)+"px");
-		canvasmask.setWidth((mimage.getImage().getHeight()+100)+"px");
-	//	canvasmask.setWidth("400px");
-		//canvasmask.setHeight("400px");
+		canvasmask.setHeight((mimage.getImage().getHeight() + 100) + "px");
+		canvasmask.setWidth((mimage.getImage().getHeight() + 100) + "px");
+		// canvasmask.setWidth("400px");
+		// canvasmask.setHeight("400px");
 
-		String bg =  app.getBgUrl(imageresource.getApplication().getRelativeLocation(imageresource));
+		String bg = app.getBgUrl(imageresource.getApplication().getRelativeLocation(imageresource));
 		canvasmask.setBackgroundImage(bg);
 		v.addComponent(canvasmask);
 
@@ -751,26 +791,25 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 				if (count > 0) {
 					int newx = (int) p.getX();
 					int newy = (int) p.getY();
-					p("Got mouse CLICK on canvas: " + p + ", child="
-							+ child);
-				//	if (child != null && child instanceof Polygon) {
-						int x = newx;
-						int y = newy;
-					//	Polygon po = (Polygon) child;
-						// p("Location of child po: "+po.getCenter());
+					p("Got mouse CLICK on canvas: " + p + ", child=" + child);
+					// if (child != null && child instanceof Polygon) {
+					int x = newx;
+					int y = newy;
+					// Polygon po = (Polygon) child;
+					// p("Location of child po: "+po.getCenter());
 
-						WellCoordinate coord = mimage.getWellCoordinate(x, y);
-						// p("Got coord: " + coord + ", setting description");
-						coordsel.setX(coord.getX() + exp.getColOffset());
-						coordsel.setY(coord.getY() + exp.getRowOffset());
-						// po.setDescription("changed description :"+coord);
-						x = coordsel.getX();
-						y = coordsel.getY();						
-						exp.makeRelative(coord);
-						app.setWellCoordinate(coord);
-						
-						app.reopenRaw();
-			//		}
+					WellCoordinate coord = mimage.getWellCoordinate(x, y);
+					// p("Got coord: " + coord + ", setting description");
+					coordsel.setX(coord.getX() + exp.getColOffset());
+					coordsel.setY(coord.getY() + exp.getRowOffset());
+					// po.setDescription("changed description :"+coord);
+					x = coordsel.getX();
+					y = coordsel.getY();
+					exp.makeRelative(coord);
+					app.setWellCoordinate(coord);
+
+					app.reopenRaw();
+					// }
 				}
 
 			}
@@ -791,7 +830,7 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 	}
 
 	private static void p(String msg) {
-		//System.out.println("MaskWindowCanvas: " + msg);
+		System.out.println("MaskWindowCanvas: " + msg);
 		Logger.getLogger(MaskEditWindowCanvas.class.getName()).log(Level.INFO, msg);
 	}
 

@@ -65,7 +65,7 @@ public class ZoomControl {
 				bucket -=8;
 				pplus.setEnabled(bucket > 1);
 				plus.setEnabled(bucket > 1);
-				if (bucket <= 1) plus.setDescription("Maximum zoom level reached");
+				if (bucket <= 1) plus.setDescription("Maximum zoom level reached ("+bucket+")");
 				else
 					pplus.setDescription("Zoom in quickly (multiple steps)");
 
@@ -81,9 +81,9 @@ public class ZoomControl {
 				bucket--;
 				pplus.setEnabled(bucket > 1);
 				plus.setEnabled(bucket > 1);
-				if (bucket <= 1) plus.setDescription("Maximum zoom level reached");
+				if (bucket <= 1) plus.setDescription("Maximum zoom level reached ("+bucket+")");
 				else
-					plus.setDescription("Click to zoom in further");
+					plus.setDescription("Click to zoom in further ("+bucket+")");
 
 				bucket = Math.max(1, bucket);
 				listener.buttonClick(event);

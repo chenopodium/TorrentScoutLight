@@ -8,15 +8,12 @@ import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.iontorrent.seq.Read;
-
 import com.iontorrent.background.EmptyTrace;
 import com.iontorrent.expmodel.CompositeExperiment;
 import com.iontorrent.expmodel.DatBlock;
 import com.iontorrent.expmodel.ExperimentContext;
 import com.iontorrent.guiutils.heatmap.GradientPanel;
 import com.iontorrent.rawdataaccess.wells.BfMaskFlag;
-import com.iontorrent.sequenceloading.SequenceLoader;
 import com.iontorrent.threads.Task;
 import com.iontorrent.threads.TaskListener;
 import com.iontorrent.utils.ErrorHandler;
@@ -28,17 +25,10 @@ import com.iontorrent.vaadin.utils.GradientLegend;
 import com.iontorrent.vaadin.utils.WindowOpener;
 import com.iontorrent.vaadin.utils.ZoomControl;
 import com.iontorrent.wellmodel.WellCoordinate;
-import com.iontorrent.wellmodel.WellSelection;
 import com.vaadin.data.Property;
 import com.vaadin.data.Property.ValueChangeEvent;
 import com.vaadin.event.MouseEvents.ClickEvent;
 import com.vaadin.event.MouseEvents.ClickListener;
-import com.vaadin.graphics.canvas.Canvas;
-import com.vaadin.graphics.canvas.shape.Cross;
-import com.vaadin.graphics.canvas.shape.Point;
-import com.vaadin.graphics.canvas.shape.Polygon;
-import com.vaadin.graphics.canvas.shape.Text;
-import com.vaadin.graphics.canvas.shape.UIElement;
 import com.vaadin.terminal.StreamResource;
 import com.vaadin.terminal.ThemeResource;
 import com.vaadin.ui.Button;
@@ -160,6 +150,7 @@ public class ETWindowCanvas extends WindowOpener implements
 			@Override
 			public void valueChange(ValueChangeEvent event) {
 				flag = (BfMaskFlag) sel.getValue();
+				if (flag != null) sel.setDescription(flag.getDescription());
 				bfmask = null;
 				reopen();
 			}
@@ -176,6 +167,19 @@ public class ETWindowCanvas extends WindowOpener implements
 		coordsel = new CoordSelect(x + exp.getColOffset(), y
 				+ exp.getRowOffset(), this);
 		coordsel.addGuiElements(h);
+		
+		Button addwin = new Button("Add window");
+		addwin.setDescription("Open another window like this one");
+		addwin.setIcon(new ThemeResource("img/addwindow.png"));		
+		addwin.addListener(new Button.ClickListener() {
+			public void buttonClick(Button.ClickEvent event) {
+				int x= location_x+100;
+				int y= location_y+50;
+				if (x > 900) x = 1;
+				app.createEtWindow(x, y, true);
+			}
+		});
+		h.addComponent(addwin);
 
 		NativeButton help = new NativeButton();
 		help.setStyleName("nopadding");
@@ -232,12 +236,14 @@ public class ETWindowCanvas extends WindowOpener implements
 
 		String key = "";
 		for (int flow : flows) {
+			if (flow > -1) {
 			if (this.emptyTrace.hasLoaded(flow))
 				key += "_" + flow;
+			}
 		}
 		String resname = exp.getFileKey() + flag.getName()
 				+ (Math.random() * 100) + "_et" + key + ".png";
-		p("Loading image resource: " + resname);
+		//p("Loading image resource: " + resname);
 		imageresource = new StreamResource(
 				(StreamResource.StreamSource) bfmask, resname, app);
 
@@ -326,7 +332,8 @@ public class ETWindowCanvas extends WindowOpener implements
 		// });
 
 		final GradientPanel grad = bfmask.getGradient();
-		leg = new GradientLegend(grad, new GradientLegend.Recipient() {
+		grad.setInPercent(true);
+		leg = new GradientLegend(bucket*bucket, grad, new GradientLegend.Recipient() {
 
 			@Override
 			public void minOrMaxChanged() {
@@ -353,7 +360,7 @@ public class ETWindowCanvas extends WindowOpener implements
 		this.parseFlow();
 		if (flows == null) {
 			flows = new ArrayList<Integer>();
-			flows.add(0);
+			flows.add(-1);
 
 		}
 		boolean gotall = true;
@@ -399,17 +406,19 @@ public class ETWindowCanvas extends WindowOpener implements
 	public void addFlowSelection(HorizontalLayout h) {
 		tflow = new TextField();
 		tflow.setWidth("60px");
-		tflow.setDescription("Enter flows for which you would like to see the average empty trace per region. Note you have to zoom in all the way to see them!");
+		tflow.setDescription("Enter flows for which you would like to see the average empty trace per region. Note you have to zoom in all the way to see them! To hide the empty traces, enter -1.");
 		// tflow.setHeight("25px");
 		tflow.setImmediate(true);
 
 		if (flows == null) {
 			flows = new ArrayList<Integer>();
-			flows.add(0);
+			flows.add(-1);
 		}
 		String s = "" + flows;
 		tflow.setValue(s.substring(1, s.length() - 1));
-		h.addComponent(new Label("Flow(s):"));
+		Label lbl = new Label("Overlay ET for flow(s):");
+		lbl.setDescription(tflow.getDescription());
+		h.addComponent(lbl);
 		h.addComponent(tflow);
 
 		tflow.addListener(new Property.ValueChangeListener() {
@@ -547,7 +556,7 @@ public class ETWindowCanvas extends WindowOpener implements
 				// result
 
 				for (int flow : flows) {
-					emptyTrace.readFile(flow, this);
+					if (flow > -1)	emptyTrace.readFile(flow, this);
 				}
 				indicator.setValue(new Float(1.0));
 

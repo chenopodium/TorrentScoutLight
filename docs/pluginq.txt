@@ -1,0 +1,19 @@
+ionadmin@blackbird:/results/plugins/torrentscout$ qstat -f|grep  plugin.q
+plugin.q@blackbird.itw         BIP   0/0/0          4.36     lx26-amd64
+plugin.q@tahiti21.itw          BIP   0/1/2          43.89    lx26-amd64    a
+plugin.q@tahiti22.itw          BIP   0/1/2          60.97    lx26-amd64    a
+plugin.q@tahiti23.itw          BIP   0/2/2          35.05    lx26-amd64
+plugin.q@tahiti24.itw          BIP   0/0/2          37.40    lx26-amd64
+plugin.q@tahiti25.itw          BIP   0/1/2          41.33    lx26-amd64
+plugin.q@tahiti26.itw          BIP   0/1/2          48.09    lx26-amd64    a
+plugin.q@tahiti27.itw          BIP   0/0/2          36.04    lx26-amd64
+plugin.q@tahiti28.itw          BIP   0/1/2          48.08    lx26-amd64    a
+plugin.q@tahiti29.itw          BIP   0/2/2          37.15    lx26-amd64
+plugin.q@tahiti30.itw          BIP   0/2/2          52.40    lx26-amd64    a
+plugin.q@tahiti31.itw          BIP   0/0/2          35.19    lx26-amd64
+plugin.q@tahiti32.itw          BIP   0/1/2          43.54    lx26-amd64    a
+plugin.q@tahiti33.itw          BIP   0/2/2          25.17    lx26-amd64
+plugin.q@tahiti34.itw          BIP   0/0/2          27.76    lx26-amd64
+plugin.q@tahiti35.itw          BIP   0/1/2          34.07    lx26-amd64
+plugin.q@tahiti36.itw          BIP   0/0/2          39.89    lx26-amd64
+plugin.q@tahiti37.itw          BIP   0/0/2          25.69    lx26-amd64

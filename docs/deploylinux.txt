@@ -1,0 +1,22 @@
+- build jnlp
+- rcp croth@iw.iontorrent.com:torrentscout.war .
+- VNC client to rnd1 (localhost/password
+- browser to  tomcat.itw:8080
+- undeploy torrentscout
+- deploy torrentscout.war
+
+SETUP VNC SERVER:
+sudo apt-get tightvncserver
+vncpasswd /.vnc/passwd
+vncpasswd
+vncserver :99 -geometry 1600x1200 -depth 24 &
+vncserver -kill :99
+rm /tmp/.X99-lock
+rm  /tmp/.X11-unix/X99
+
+CARLSBAD:
+\\10.33.106.4\results
+
+rlogin 10.33.62.34  -l ionuser
+/mnt/ioncpe_res/
+http://10.45.3.214:8080

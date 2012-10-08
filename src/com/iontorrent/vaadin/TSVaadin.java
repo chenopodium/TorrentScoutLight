@@ -33,6 +33,8 @@ import com.iontorrent.utils.SystemTool;
 import com.iontorrent.utils.io.FileTools;
 import com.iontorrent.vaadin.align.AlignWindow;
 import com.iontorrent.vaadin.automate.AutomateWindow;
+import com.iontorrent.vaadin.barcodemaps.BarcodeMaskWindowCanvas;
+import com.iontorrent.vaadin.barcodemaps.BarcodeTable;
 import com.iontorrent.vaadin.bgmodel.ETWindowCanvas;
 import com.iontorrent.vaadin.bgmodel.RegionChartWindow;
 import com.iontorrent.vaadin.bgmodel.RegionPropertyChartWindow;
@@ -74,7 +76,7 @@ import com.vaadin.ui.Window.Notification;
 public class TSVaadin extends Application implements
 		HttpServletRequestListener, ParameterHandler {
 
-	public static String VERSION = "3.0.4";
+	public static String VERSION = "3.0.75";
 
 	static {
 		Logger.global.setLevel(Level.WARNING);
@@ -98,13 +100,17 @@ public class TSVaadin extends Application implements
 	private WindowOpener fitWindow;
 	//private WindowOpener maskWindow;
 	private WindowOpener etWindow;
+	private ArrayList<WindowOpener> etWindows;
 	private WindowOpener scoreWindow;
+	private WindowOpener barcodeWindow;
+	private WindowOpener barcodeTable;
 	private WindowOpener geneWindow;
 	private WindowOpener chipWindow;
 	private WindowOpener helpWindow;
 	private WindowOpener alignWindow;
 	private WindowOpener compWindow;
 	private WindowOpener maskeditWindow;
+	private ArrayList<WindowOpener> maskeditWindows;
 	private WindowOpener testWindow;
 	private WindowOpener xyWindow;
 	// private MovieWindow movieWindow;
@@ -173,19 +179,23 @@ public class TSVaadin extends Application implements
 		String bg = relative;
 		bg = appurl + relative.replace("app://", "");
 		// http://127.0.0.1:8080/TSL/APP/1/7848026798042749live49.917729478381844_bf.png
-		p("Bg before localhost check: " + bg);
-		p("server: " + getServer());
+		//p("Bg before localhost check: " + bg);
+	//	p("server: " + getServer());
 		if (!getServer().equalsIgnoreCase("localhost")
 				&& bg.indexOf("127.0.0.1") > -1) {
 			bg = bg.replace("127.0.0.1:8080", server);
 			bg = bg.replace("127.0.0.1", server);
 		}
-		p("Using bg: " + bg);
+	//	p("Using bg: " + bg);
 
 		return bg;
 	}
 
 	private void getIpInfo() {
+		if (server != null) {
+			p("Already got server: "+server);
+			return;
+		}
 		p("=== get IpInfo ===");
 		p("App url: " + this.getURL().toExternalForm());
 		p("App host:" + super.getURL().getHost());
@@ -193,9 +203,9 @@ public class TSVaadin extends Application implements
 		try {
 			InetAddress thisIp = InetAddress.getLocalHost();
 			p("Hostname: " + InetAddress.getLocalHost().getCanonicalHostName());
-			server = InetAddress.getLocalHost().getCanonicalHostName();
+			//server = InetAddress.getLocalHost().getCanonicalHostName();
 			p("IP:" + thisIp.getHostAddress());
-			p("Server is now=hostname: " + server);
+			//p("Server is now=hostname: " + server);
 		} catch (Exception e) {
 			p("Could not get ip");
 		}
@@ -283,6 +293,9 @@ public class TSVaadin extends Application implements
 		add(it, this.xyWindow);
 		add(it, "Export data (ionograms, alignments, raw data)",
 				this.maskeditWindow);
+		add(it, "Compute and view custom heat maps", this.maskeditWindow);
+		add(it, this.barcodeTable, "View barcode table");
+		add(it, this.barcodeWindow, "View barcode heat maps");
 
 		it = menu.addItem("|", null);
 
@@ -359,6 +372,7 @@ public class TSVaadin extends Application implements
 	private void add(MenuItem it, WindowOpener win) {
 		// it.addSeparator();
 		MenuItem child = it.addItem(win.getName(), null, win);
+		
 		addDesc(child, win);
 	}
 	private void add(MenuItem it, WindowOpener win, String name) {
@@ -387,11 +401,8 @@ public class TSVaadin extends Application implements
 //				"View heat maps of well properties including live, bead, dud, ambigiuous etc",
 //				x, y);
 		
-		etWindow = new ETWindowCanvas(
-				this,
-				main,
-				"View regional average empty traces on top of bf heat map (live, bead, dud, ambigiuous etc)",
-				x, y);
+		createEtWindow(y, x, false);
+		
 		chipWindow = new WholeChipWindowCanvas(this, main,
 				"View raw data of any flow and frame of the entire chip", x, y);
 		scoreWindow = new ScoreMaskWindowCanvas(
@@ -399,6 +410,16 @@ public class TSVaadin extends Application implements
 				main,
 				"Create custom masks based on Q values, beadfind and other scores, find perfect reads, sequence substrings or alignment patterns - and create masks from the results that can be used in XYZ charts or in Fit/Process",
 				x, y);
+		barcodeWindow = new BarcodeMaskWindowCanvas(
+				this,
+				main,
+				"View barcode heat maps, and create masks from them that can be used in XYZ charts or in Fit/Process",
+				x, y);
+		barcodeTable = new BarcodeTable(
+				this,
+				main,
+				"List or barcodes",
+				x+500, y);
 		tableWindow = new TableWindow(
 				this,
 				main,
@@ -437,9 +458,7 @@ public class TSVaadin extends Application implements
 		automateWindow = new AutomateWindow(this, main,
 				"Compute mean signal for an entire area of a selected mask",
 				x + 500, y);
-		maskeditWindow = new MaskEditWindowCanvas(this, main,
-				"View and edit masks, and export data to file based on a mask",
-				x, y);
+		createMaskEditWindow(y, x, false);
 
 		xyWindow = new XYWindow(
 				this,
@@ -468,6 +487,8 @@ public class TSVaadin extends Application implements
 		windows.add(etWindow);
 		windows.add(chipWindow);
 		windows.add(scoreWindow);
+		windows.add(barcodeWindow);
+		windows.add(barcodeTable);
 		windows.add(geneWindow);
 		windows.add(tableWindow);
 		windows.add(ionoWindow);
@@ -482,6 +503,34 @@ public class TSVaadin extends Application implements
 		windows.add(maskeditWindow);
 
 		// main.addComponent(layout);
+	}
+	public void createMaskEditWindow(int y, int x, boolean open) {
+		
+		WindowOpener win = new MaskEditWindowCanvas(this, main,
+				"View and edit masks, and export data to file based on a mask",
+				x, y);
+		if (maskeditWindows == null) {
+			maskeditWindows = new ArrayList<WindowOpener>();
+			
+		}
+		if (maskeditWindow == null) maskeditWindow = win;
+		maskeditWindows.add(win);
+		if(open) win.open();
+	}
+	public void createEtWindow(int y, int x, boolean open) {
+		
+		WindowOpener win = new ETWindowCanvas(
+				this,
+				main,
+				"View regional average empty traces on top of bf heat map (live, bead, dud, ambigiuous etc)",
+				x, y);
+		if (etWindows == null) {
+			etWindows = new ArrayList<WindowOpener>();
+			
+		}
+		if (etWindow == null) etWindow = win;
+		etWindows.add(win);
+		if(open) win.open();
 	}
 
 	public ArrayList<WindowOpener> getMyWindows() {
@@ -630,6 +679,7 @@ public class TSVaadin extends Application implements
 		}
 	}
 
+	
 	public void handleParameters(Map par) {
 		Iterator it = par.keySet().iterator();
 		if (parameters != null) {
@@ -641,7 +691,9 @@ public class TSVaadin extends Application implements
 		boolean hasraw = false;
 		boolean hasres = false;
 		boolean hasreads = false;
+		boolean searchdb = false;
 		String read_names = null;
+		String resdir = null;
 		for (; it.hasNext();) {
 			String key = "" + it.next();
 			String value = "" + ((String[]) par.get(key))[0];
@@ -653,21 +705,58 @@ public class TSVaadin extends Application implements
 					p("Parameter " + key + "=" + value);
 				if (key.equalsIgnoreCase("raw_dir"))
 					hasraw = true;
-				else if (key.equalsIgnoreCase("res_dir"))
+				else if (key.equalsIgnoreCase("res_dir")) {
 					hasres = true;
+					resdir = value;
+				}
+				else if (key.equalsIgnoreCase("searchdb"))
+					searchdb = true;
 				else if (key.equalsIgnoreCase("read_names")) {
 					hasreads = true;
 					read_names = value;
 				}
+				
+				else if (key.equalsIgnoreCase("db")) {
+					this.server = value;
+					if (server != null && server.startsWith("http://")) {
+						server = server.substring(7);
+					}
+					p("Got db: "+server);
+					
+				}
 			}
+		}
+		if (searchdb) {
+			p("Should search db");
+			this.dbWindow.open();
+			DbWindow db = (DbWindow)dbWindow;
+			exp = null;
+			if (hasres) {
+				p("Got results folder in url: "+resdir);
+				this.showMessage("Searching db for experiment", resdir);
+				exp = db.searchDbByResDir(resdir);
+				if (exp != null) {
+					p("Got exp:"+exp);
+					if (hasreads) {				
+						parseAndShowReads("Reads from URL", read_names);								
+					}
+					showExpContext(exp);					
+				}
+				else {
+					p("Got no exp for "+resdir);
+					this.showMessage("Found no experiment for", resdir);
+				}
+			}
+			else {
+				this.showMessage("Cannot search", "Got searchdb, but have no info to search on :-(");
+			}
+			 
 		}
 		if (hasraw || hasres) {
 			this.expWindow.open();
 			expWindow.handleOk();
 			if (hasreads) {				
-				parseAndShowReads("Reads from URL", read_names);
-				
-				
+				parseAndShowReads("Reads from URL", read_names);								
 			}			
 		} else
 			main.showNotification("Select an analysis in the db",
@@ -761,7 +850,7 @@ public class TSVaadin extends Application implements
 		this.exp = exp;
 		scoremask = null;
 		if (exp != null) {
-			int raster = 100;
+			int raster = Math.max(exp.getNrcols(), exp.getNrrows());
 			if (maincont != null) {
 				raster = maincont.getRasterSize();
 			}
@@ -828,23 +917,23 @@ public class TSVaadin extends Application implements
 		}
 		exp.getWellContext().setCoordinate(mid);
 		exp.getWellContext().setSelection(sel);
-		if (exp.hasWells()) {
-			tableWindow.reopen();
-//			if (inputReads != null || tableWindow.isOpen())
-//				tableWindow.open();
-//			else
-//				tableWindow.close();
+		tableWindow.reopen();
+
+		
+		for (WindowOpener et: etWindows) {
+			et.clear();
 		}
-		//maskWindow.clear();
-		etWindow.clear();
 		this.scoreWindow.clear();
+		this.barcodeWindow.clear();
 		this.processWindow.clear();
 		// tabsheet.setSelectedTab(viewTab);
 		if (!exp.doesExplogHaveBlocks()) {
 			p("Got no blocks");
 			if (exp.hasBfMask()) {
 				//maskWindow.open();
-				etWindow.open();
+				for (WindowOpener et: etWindows) {
+					et.open();
+				}
 			} else if (exp.hasDat()) {
 				this.chipWindow.open();
 			} else {
@@ -858,6 +947,16 @@ public class TSVaadin extends Application implements
 		// if (exp.hasBam()) alignWindow.open();
 		// if(exp.getWellContext() != null &&
 		// exp.getWellContext().getCoordinate()!=null) rawWindow.open();
+		if (this.getParameters("location") != null) {
+			p("Got a location in parameters, should open gene finder");
+			GeneWindow gene = ((GeneWindow)geneWindow);
+			long loc = Long.parseLong(getParameters("location"));
+			String chr = this.getParameters("chromosome");
+			gene.setReference(chr);
+			gene.setGenomepos(loc);
+			gene.open();
+			gene.findGenes();
+		}
 	}
 
 	public String getServer() {
@@ -917,6 +1016,18 @@ public class TSVaadin extends Application implements
 				maskeditWindow.open();
 		} else {
 			maskeditWindow.reopen();
+		}
+	}
+	public void reopenOtherMaskedit(boolean open) {
+		for (WindowOpener win: this.maskeditWindows) {
+			if (win != this.maskeditWindow) {
+				if (!win.isOpen()) {
+					if (open)
+						win.open();
+				} else {
+					win.reopen();
+				}
+			}
 		}
 	}
 
@@ -1195,6 +1306,16 @@ public class TSVaadin extends Application implements
 			scoreWindow.reopen();
 	}
 
+	public BarcodeMaskWindowCanvas getBarcodeCanvas() {
+		return (BarcodeMaskWindowCanvas)this.barcodeWindow;
+	}
+	public void reopenBarcode() {
+		if (!this.barcodeWindow.isOpen()) {
+			barcodeWindow.open();
+		} else
+			barcodeWindow.reopen();
+	}
+
 	public void reopenAlign() {
 		if (!this.alignWindow.isOpen()) {
 			alignWindow.open();
@@ -1222,6 +1343,19 @@ public class TSVaadin extends Application implements
 
 	public void openDb() {
 		this.dbWindow.open();
+		
+	}
+	public void openBarcodeTable() {
+		if (!this.barcodeTable.isOpen()) {
+			barcodeTable.open();
+		}
+		
+	}
+	public void close(WindowOpener win) {
+		if (etWindows != null) {
+			etWindows.remove(win);			
+		}
+		if (maskeditWindows != null) maskeditWindows.remove(win);
 		
 	}
 }

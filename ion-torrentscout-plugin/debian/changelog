@@ -1,0 +1,5 @@
+ion-torrentscout-plugin (3.0.6) lucid; urgency=low
+
+  * split package out from ion-torrentscout-light package to remove unecessary dependencies
+
+ -- root <Chantal Roth <chantal.roth@lifetech.com>  Mon 3 Sep 2012 09:45:54 -0700

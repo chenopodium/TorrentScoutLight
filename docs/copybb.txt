@@ -1,0 +1,28 @@
+pscp ionadmin@blackbird.ite:/results/analysis/output/Home/testnew_105/block_X0_Y0/bfmask.bin s:/data/bb1/results/block_X0_Y0
+pscp ionadmin@blackbird.ite:/results/analysis/output/Home/testnew_105/block_X0_Y576/bfmask.bin s:/data/bb1/results/block_X0_Y576
+pscp ionadmin@blackbird.ite:/results/analysis/output/Home/testnew_105/block_X640_Y0/bfmask.bin s:/data/bb1/results/block_X640_Y0
+pscp ionadmin@blackbird.ite:/results/analysis/output/Home/testnew_105/block_X640_Y576/bfmask.bin s:/data/bb1/results/block_X640_Y576
+
+pscp ionadmin@blackbird.ite:/results/analysis/output/Home/testnew_105/block_X0_Y0/1.wells s:/data/bb1/results/block_X0_Y0
+pscp ionadmin@blackbird.ite:/results/analysis/output/Home/testnew_105/block_X0_Y576/1.wells s:/data/bb1/results/block_X0_Y576
+pscp ionadmin@blackbird.ite:/results/analysis/output/Home/testnew_105/block_X640_Y0/1.wells s:/data/bb1/results/block_X640_Y0
+pscp ionadmin@blackbird.ite:/results/analysis/output/Home/testnew_105/block_X640_Y576/1.wells s:/data/bb1/results/block_X640_Y576
+
+pscp ionadmin@blackbird.ite:/results/analysis/output/Home/testnew_105/block_X0_Y0/rawlib.sff s:/data/bb1/results/block_X0_Y0
+pscp ionadmin@blackbird.ite:/results/analysis/output/Home/testnew_105/block_X0_Y576/rawlib.sff s:/data/bb1/results/block_X0_Y576
+pscp ionadmin@blackbird.ite:/results/analysis/output/Home/testnew_105/block_X640_Y0/rawlib.sff s:/data/bb1/results/block_X640_Y0
+pscp ionadmin@blackbird.ite:/results/analysis/output/Home/testnew_105/block_X640_Y576/rawlib.sffs:/data/bb1/results/block_X640_Y576
+
+pscp ionadmin@blackbird.ite:/results/analysis/output/Home/testnew_105/block_X0_Y0/*.ba* s:/data/bb1/results/block_X0_Y0
+pscp ionadmin@blackbird.ite:/results/analysis/output/Home/testnew_105/block_X0_Y576/*.ba* s:/data/bb1/results/block_X0_Y576
+pscp ionadmin@blackbird.ite:/results/analysis/output/Home/testnew_105/block_X640_Y0/*.ba* s:/data/bb1/results/block_X640_Y0
+pscp ionadmin@blackbird.ite:/results/analysis/output/Home/testnew_105/block_X640_Y576/*.ba*:/data/bb1/results/block_X640_Y576
+
+
+pscp ionadmin@blackbird.ite:/results/PGM_test/314_fourblock/explog.txt s:/data/bb1/raw
+
+
+
+pscp ionadmin@aruba.apg.per.na.ab.applera.net:/results5/lennon/R_2011_10_12_12_02_44_user_LEN-651--R128619-056_599_314_n2-cd/bead*.dat s:/data/314a/raw
+pscp ionadmin@aruba.apg.per.na.ab.applera.net:/results/analysis/output/Home/Auto_LEN-651--R128619-056_599_314_n2-cd_8588_12461/1.wells s:/data/314a/results
+pscp ionadmin@aruba.apg.per.na.ab.applera.net:/results/analysis/output/Home/Auto_LEN-651--R128619-056_599_314_n2-cd_8588_12461/bfmask.bin s:/data/314a/results

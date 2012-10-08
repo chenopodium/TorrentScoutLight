@@ -1,0 +1,11 @@
+
+
+pscp ionadmin@rnd1.ite:/results14/analysis/output/IonEast/Auto_SNA-371_9244_13374/bfmask.bin s:/data/314
+
+pscp ionadmin@rnd1.ite:/results14/analysis/output/IonEast/Auto_SNA-371_9244_13374/1.wells s:/data/314
+
+pscp ionadmin@rnd1.ite:/results14/analysis/output/IonEast/Auto_SNA-371_9244_13374/*.bam s:/data/314
+
+pscp ionadmin@rnd1.ite:/results14/analysis/output/IonEast/Auto_SNA-371_9244_13374/*.sff.zip s:/data/314
+
+pscp ionadmin@rnd1.ite:/results14/analysis/output/IonEast/Auto_SNA-371_9244_13374/BkgModelEmptyTrace* s:/data/314

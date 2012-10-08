@@ -31,6 +31,7 @@ import com.iontorrent.scout.experimentviewer.exptree.NodeFilter;
 import com.iontorrent.scout.experimentviewer.exptree.Q20BasesNodeFilter;
 import com.iontorrent.scout.experimentviewer.exptree.Q20MaxLenNodeFilter;
 import com.iontorrent.scout.experimentviewer.exptree.RunFullNodeFilter;
+import com.iontorrent.scout.experimentviewer.exptree.RunResDirNodeFilter;
 import com.iontorrent.scout.experimentviewer.options.PersistenceHelper;
 import com.iontorrent.utils.ErrorHandler;
 import com.iontorrent.utils.io.FileTools;
@@ -604,13 +605,51 @@ public class DbWindow extends WindowOpener {
 		afterGotFilter();
 
 	}
+	
+	
+	public ExperimentContext searchDbByResDir(String resdir) {
+		if (resdir.endsWith("/")) resdir = resdir.substring(0, resdir.length()-1);
+		int last = resdir.lastIndexOf("/");
+		if (last > 0 && last+1 < resdir.length()) {
+			resdir = resdir.substring(last);
+		}
+		p("Finding results containing resdir: "+resdir);
+		resultsfilter = new RunResDirNodeFilter(resdir);
+		return searchDb(null, resultsfilter);
+	}
+	public ExperimentContext searchDb(NodeFilter expfilter, NodeFilter resultsfilter) {
+		this.resultsfilter = resultsfilter;
+		this.expfilter = expfilter;
+		ArrayList<MyResult> filteredresults = afterGotFilter();
+		
+		String msg = "";
+		if (expfilter != null) msg += expfilter.toString()+"; ";
+		if (resultsfilter != null) msg += resultsfilter.toString();
+		MyResult res = null;
+		if (filteredresults == null || filteredresults.size() <1) {
+			app.showLongMessage("Found no experiments", msg );
+		}
+		else if (filteredresults.size() == 1) {
+			//app.showLongMessage("Found ONE experiment", msg );
+			res = filteredresults.get(0);			
+		}
+		else {
+		//	app.showLongMessage("Found "+ filteredresults.size()+" experiments, using first", msg );
+			res = filteredresults.get(0);
+		}
+		if (res != null) {
+			return(this.selectRun(res));
+		}
+		return null;
+	}
 
-	private void afterGotFilter() {
+	private ArrayList<MyResult> afterGotFilter() {
 		if (expfilter == null) {
 			expfilter = new ExpDateNodeFilter(default_days);
 			filtertitle = "Past " + default_days + " days";
 		}
 
+		ArrayList<MyResult> filteredresults = null;
 		try {
 			lastexperiments = filterExperiments(allexperiments, expfilter);
 			if (lastexperiments.size() < 1)
@@ -626,7 +665,7 @@ public class DbWindow extends WindowOpener {
 	
 			// still use a filter just so we can display some useful value in the
 			// tree node
-			createTreeModelFromData(lastrigs, lasttree, resultsfilter,
+			filteredresults = createTreeModelFromData(lastrigs, lasttree, resultsfilter,
 					lastresults.size() < 50);
 	
 			maintab.setCaption(filtertitle);
@@ -642,6 +681,7 @@ public class DbWindow extends WindowOpener {
 		catch (Throwable e) {
 			p("Got an error in afterGotFilter: "+ErrorHandler.getString(e));
 		}
+		return filteredresults;
 	}
 
 	private ArrayList<RundbExperiment> filterExperiments(
@@ -704,7 +744,7 @@ public class DbWindow extends WindowOpener {
 				.getExpName().indexOf("block") > -1));
 	}
 
-	private void createTreeModelFromData(ArrayList<MyRig> myrigs,
+	private ArrayList<MyResult> createTreeModelFromData(ArrayList<MyRig> myrigs,
 			final Tree tree, NodeFilter resultfilter, boolean expand) {
 		tree.removeAllItems();
 
@@ -713,6 +753,7 @@ public class DbWindow extends WindowOpener {
 		String passed_name = app.getParameters("run_name");
 		p("Create tree: resultfilter="+resultfilter);
 		int count = 0;
+		ArrayList<MyResult> filteredresults = new ArrayList<MyResult> ();
 		for (MyRig rig : myrigs) {
 			boolean foundinrig = false;
 
@@ -734,6 +775,7 @@ public class DbWindow extends WindowOpener {
 					}
 					count++;
 					if (resultfilter == null || resultfilter.passes(myres)) {
+						filteredresults.add(myres);
 						if (!foundinrig) {
 							foundinrig = true;
 							Item rigit = tree.addItem(rig);
@@ -854,6 +896,7 @@ public class DbWindow extends WindowOpener {
 				selectItem(it);
 			}
 		});
+		return filteredresults;
 	}
 
 	private void showRunInfo(MyResult res) {
@@ -928,7 +971,7 @@ public class DbWindow extends WindowOpener {
 		}
 	}
 
-	private void selectRun(MyResult res) {
+	private ExperimentContext selectRun(MyResult res) {
 		showRunInfo(res);
 		ExperimentContext exp = res.createContext();
 		String dir = exp.getResDirFromDb();
@@ -937,7 +980,7 @@ public class DbWindow extends WindowOpener {
 		p("Dir from db is now converted to: " + dir);
 
 		exp.setResultsDirectory(dir);
-		exp.setCacheDir(dir + "plugin_out/torrentscout/");
+		exp.setCacheDir(dir + "plugin_out/torrentscout_out/");
 		File f = new File(exp.getCacheDir());
 		if (!f.exists())
 			f.mkdirs();
@@ -954,6 +997,7 @@ public class DbWindow extends WindowOpener {
 		link = new Link("Open report", new ExternalResource(url));
 		link.setTargetName("_blank");
 		grid.addComponent(link, 1, 2);
+		return exp;
 	}
 
 	private String findDir(String d) {

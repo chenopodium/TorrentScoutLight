@@ -105,7 +105,7 @@ public class ScoreMaskWindowCanvas extends WindowOpener implements
 	public ScoreMaskWindowCanvas(TSVaadin app, Window main, String description,
 			int x, int y) {
 		super("Create masks and find reads from read properties", main,
-				description, x, y, 800, 800);
+				description, x, y, 600, 600);
 		this.app = app;
 		bucket = 5;
 		setAutoLoad(true);
@@ -133,16 +133,10 @@ public class ScoreMaskWindowCanvas extends WindowOpener implements
 			return;
 		}
 
-		if (!exp.hasBam()) {
+		if (!exp.hasBam() && !exp.hasSff() && !exp.hasSeparator()) {
 			// try to find other bam?
-			appwindow.showNotification("Bam File not found",
+			appwindow.showNotification("No BAM, separator or sff file not found",
 					"<br/>Could not find the file " + exp.getBamFilePath(),
-					Window.Notification.TYPE_WARNING_MESSAGE);
-			
-		}
-		if (!exp.hasSff()) {
-			appwindow.showNotification("Sff File not found",
-					"<br/>Could not find the file " + exp.getSffFilePath(),
 					Window.Notification.TYPE_WARNING_MESSAGE);
 			return;
 		}
@@ -373,10 +367,14 @@ public class ScoreMaskWindowCanvas extends WindowOpener implements
 			String bg = app.getBgUrl(imageresource.getApplication()
 					.getRelativeLocation(imageresource));
 			canvas.setBackgroundImage(bg);
-			canvas.setHeight((bfmask.getImage().getHeight() + 200) + "px");
+			canvas.setHeight((bfmask.getImage().getHeight() + 100) + "px");
 			final GradientPanel grad = bfmask.getGradient();
-
-			GradientLegend leg = new GradientLegend(grad,
+			grad.setInPercent(false);
+			// get multiplier!
+			int mult = flag.multiplier();
+			
+			int b = this.bucket*bucket;
+			GradientLegend leg = new GradientLegend(mult*b, grad,
 					new GradientLegend.Recipient() {
 
 						@Override
@@ -424,11 +422,11 @@ public class ScoreMaskWindowCanvas extends WindowOpener implements
 			if (flag.isCustom()) {
 				total = mask.getTotal(flag);
 				
-				if (total < 5000) {
-					selectAllWellsOfResult(5000,
+				if (total < MAX_RES) {
+					selectAllWellsOfResult(MAX_RES,
 							total+" results of " + flag.getDescription());
 				} else
-					getLatestSelection(5000+" (sub)results of " + flag.getDescription());
+					getLatestSelection(MAX_RES+" (sub)results of " + flag.getDescription());
 			}
 			app.openTable();
 		}

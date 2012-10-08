@@ -1,0 +1,17 @@
+To build the debian package for release:
+
+ 
+
+1.    Change into directory ./TorrentScoutLight/ion-torrentscout-light
+
+2.    Edit version file to update the RELEASE number; typically increment by 1.
+
+3.    Execute ./build-deb.sh.  You will be thrown into an editor to add a comment to the ChangeLog file.  Make an appropriate entry and save.
+
+4.    Change to parent directory (./TorrentScoutLight)
+
+5.  Upload the new deb file to internal apt repository: ../TS/buildTools/publish <new deb file>
+
+6.  Commit to svn the edited version file and the ChangeLog file.
+
+sudo dpkg --install ion-torrentscout-light-2.3.0.deb

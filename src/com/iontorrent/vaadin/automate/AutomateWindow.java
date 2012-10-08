@@ -110,6 +110,7 @@ public class AutomateWindow extends WindowOpener implements Button.ClickListener
 	int[] flownr;
 	boolean[] taskdone;
 	AutomateTask task;
+	static final int MAX_RASTER = 400;
 	
 	public AutomateWindow(TSVaadin app, Window main, String description, int x, int y) {
 		super("Automate (mean signal)", main, description, x, y, 600, 500);
@@ -135,6 +136,11 @@ public class AutomateWindow extends WindowOpener implements Button.ClickListener
 		app.reopenMaskedit(true);
 		exp = app.getExperimentContext();
 		maincont = app.getExplorerContext();
+		if (maincont.getRasterSize()>MAX_RASTER) {
+			// make smaller
+			app.showMessage("Using smaller area", "I am reducing the visible chip size to "+MAX_RASTER+", otherwise there could be an out of memory error :-)");
+			maincont.setRasterSize(MAX_RASTER);
+		}
 		RasterData data = maincont.getData();
 
 		if (data == null) {

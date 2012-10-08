@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+  <script type="text/javascript" src="/site_media/jquery/js/jquery-1.7.2.min.js"></script>
+
+  <style type='text/css'>
+        #formwrap {
+                line-height: 2em;
+                background: #def;
+                margin: 10px;
+                padding: 10px;
+                height: 360px;
+                text-align: center;
+				overflow: auto;
+        }
+
+        #json_result {
+                margin: 10px;
+                background: #def;
+                padding: 10px;
+                height: 40px;
+                overflow: auto;
+        }
+
+        body {
+                font-family: "Lucida Grande", "Lucida Sans Unicode", Verdana, Arial, Helvetica, sans-serif;
+                font-size: 12px;
+        }
+
+  </style>
+
+  <script type='text/javascript'>
+
+        $.fn.serializeObject = function()
+            {
+                var o = {};
+                var a = this.serializeArray();
+                $.each(a,
+                function() {
+                    if (o[this.name] != null) {
+                        if (!o[this.name].push) {
+                            o[this.name] = [o[this.name]];
+                        }
+                        o[this.name].push(this.value || '');
+                    } else {
+                        o[this.name] = this.value || '';
+                    }
+                });
+                return o;
+            };
+
+            $(function() {
+                $('#postbutton').click(function() {
+                        obj =  $('#inputform').serializeObject();
+
+                        pluginAPIJSON = { "plugin" : [TB_plugin.fields.name], "pluginconfig" : obj };
+                        pluginAPIJSON = JSON.stringify(pluginAPIJSON);
+
+                        pluginURL = "/rundb/api/v1/results/" + TB_result + "/plugin/";
+                        $("#json_result").html(pluginAPIJSON);
+
+                        $.ajax({
+                              type: 'POST',
+                              url: pluginURL,
+                              contentType: "application/json; charset=utf-8",
+                              data: pluginAPIJSON,
+                              dataType: "json",
+                              success: function () {parent.$.fn.colorbox.close();}
+                        });
+
+                });
+				$('#postbuttonjust').click(function() {
+                        obj =  $('#inputform').serializeObject();
+
+                        pluginAPIJSON = { "plugin" : [TB_plugin.fields.name], "pluginconfig" : obj };
+                        pluginAPIJSON = JSON.stringify(pluginAPIJSON);
+
+                        pluginURL = "/rundb/api/v1/results/" + TB_result + "/plugin/";
+                        $("#json_result").html(pluginAPIJSON);
+
+                        $.ajax({
+                              type: 'POST',
+                              url: pluginURL,
+                              contentType: "application/json; charset=utf-8",
+                              data: pluginAPIJSON,
+                              dataType: "json",
+                              success: function () {parent.$.fn.colorbox.close();}
+                        });
+
+                });
+            });
+
+  </script>
+
+</head>
+        <body>
+                <h2>TorrentScout Alignment Search</h2>
+				<p>You can enter mutliple alignment searches here which will then be available interactively in Torrent Scout once completed</p>
+                <p>If you enter no parameters at all, it will simply compute the standard index files (if it hasn't already computed them, such as wells to alignment, genome position to well etc)</p>
+				
+				<center>
+				<input id="postbuttonjust" type="submit" value="Just compute indices (for TSL)" 
+				title="If you don't want to search anything but just want to compute (or recompute) indexfiles, click here"/></center>
+
+        <div id="formwrap">
+                 <form id="inputform" align="left">
+<p>
+                          Search for alignment patterns between flows (to search all flows, just enter 0 for both):<br>						  
+                                 Start flow: <input title="to search all flows, just enter 0 for both"  name="startflow" value="0" style="WIDTH: 57px; HEIGHT: 22px" size="7">
+                                 &nbsp;End flow: &nbsp;  <input title="to search all flows, just enter 0 for both" name="endflow" value="0" style="WIDTH: 46px; HEIGHT: 22px" size="5"></p>
+<p>
+
+<table border="0" cellspacing="0" cellpadding="3" width="100%" align="center">
+  
+  <tr>
+    <td><font size="2"><strong>Read sequence (eg TT_)</strong><br>(X = 4 searches with G/A/T/C)</font>   </td>
+    <td><font size="2"><strong>Alignment sequence (eg  TTT)</strong><br>(? = any base or gap, _ =gap)</font>   </td>
+    <td><font size="2"><strong>Name of heat map</strong><br>(X will be replaced with G/A/T/C)</font>   </td></tr>
+  <tr>
+    <td><input title="An example would be TTT__, meaning we read 3 Ts and then missed two" name="read_0" value=""></td>
+    <td><input title="An example would be TTTTT, meaning the alignment had 5 Ts" name="align_0" value=""></td>
+    <td><input title="Name the heatmap, such as miseed_2_T which will be used later when you want to load the search result" name="heatmap_0" maxlength="40" value=""></td></tr>
+  <tr>
+    <td><input name="read_1" value="" ></td>
+    <td><input name="align_1" value=""></td>
+    <td><input name="heatmap_1" maxlength="40"  value=""
+     ></td></tr>
+  <tr>
+    <td><input name="read_2" ></td>
+    <td><input name="align_2" ></td>
+    <td><input name="heatmap_2" maxlength="40" 
+     ></td></tr>
+  <tr>
+    <td><input name="read_3" ></td>
+    <td><input name="align_3" ></td>
+    <td><input name="heatmap_3" maxlength="40" 
+     ></td></tr>
+  <tr>
+    <td><input name="read_4" ></td>
+    <td><input name="align_4" ></td>
+    <td><input name="heatmap_4" maxlength="40"></td></tr>
+  
+  </table><br>
+  	</form>
+         <input title="Will scan the BAM file for the specified alignment patterns and display a thumbnail in the results. You can also view the result interacively later in TSL (Find reads, open .bmp file with the heatmap)" 
+		 id="postbutton" type="submit" value="Search (and compute index files)"/>
+        </div>
+        
+        <!--<div id="json_result"> </div>-->
+    </body>
+
+</html>

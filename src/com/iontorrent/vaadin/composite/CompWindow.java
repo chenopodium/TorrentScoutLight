@@ -11,6 +11,7 @@ import java.util.logging.Logger;
 import com.iontorrent.expmodel.CompositeExperiment;
 import com.iontorrent.expmodel.DatBlock;
 import com.iontorrent.expmodel.ExperimentContext;
+import com.iontorrent.heatmaps.CompositeWellDensity;
 import com.iontorrent.heatmaps.PrimerSMCalculator;
 import com.iontorrent.heatmaps.ScoreMaskCalculatorIF;
 import com.iontorrent.heatmaps.ScoreMaskGenerator;
@@ -33,7 +34,8 @@ import com.iontorrent.vaadin.utils.OptionsDialog;
 import com.iontorrent.vaadin.utils.WindowOpener;
 import com.iontorrent.vaadin.utils.ZoomControl;
 import com.iontorrent.wellmodel.BfHeatMap;
-import com.iontorrent.wellmodel.CompositeWellDensity;
+
+import com.iontorrent.wellmodel.WellContext;
 import com.iontorrent.wellmodel.WellCoordinate;
 import com.iontorrent.wellmodel.WellSelection;
 import com.vaadin.data.Property;
@@ -154,7 +156,7 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 		sel.setImmediate(true);
 		sel.addListener(this);
 
-		flagsel = addFlagSelect(h, false);
+		flagsel = addFlagSelect(h, true);
 
 		p("added flags");
 		flagsel.setImmediate(true);
@@ -404,8 +406,15 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 			flagsel.setItemCaption(f, f.getName());
 		}
 		if (withScores) {
+			int bam = this.comp.countBam();
+			int sff = this.comp.countSff();
+			int sep = this.comp.countSeparator();
+			int min = comp.getNrBlocks()/4;
 			for (ScoreMaskFlag f : ScoreMaskFlag.values()) {
-			
+				// check first if the files are there!
+				if (f.isIn(ScoreMaskFlag.SEP_FLAGS) && sep < min) continue;
+				if (f.isIn(ScoreMaskFlag.SFF_FLAGS) && sff < min) continue;
+				if (f.isIn(ScoreMaskFlag.SAM_FLAGS) && bam < min) continue;
 				flagsel.addItem(f);
 				flagsel.setItemCaption(f, f.getName());
 			}
@@ -463,13 +472,21 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 		else {
 			p("Got scoreflag: "+curscoreflag);
 			file = scoremask.getImageFile(curscoreflag);
-			p("file is: "+file);
-			scoremask.readData(curscoreflag);
+			p(file);
+			try {
+				p("reading data");
+				scoremask.readData(curscoreflag);
+			}
+			catch (Exception e) {
+				p("Got error while reading data: "+ErrorHandler.getString(e));
+			}
+			image = new CompositeImage(comp, curscoreflag, null, flow, frame, bucket);
 		}
 		if (foundblocks != null) {
 			// mark found blocks!
 			image.markBlocks(foundblocks);
 		}
+		p("read file "+file);
 		File f = new File(file);
 		imageresource = new StreamResource(image, comp.getRootContext()
 				.getRawDir() + "_" + f.getName() + "_comp_" + key + ".png", app);
@@ -575,14 +592,23 @@ public class CompWindow extends WindowOpener implements ProgressListener,
 		p("Creating image file for flag " + flag);
 		BfHeatMap mask = BfHeatMap.getMask(comp.getRootContext());
 
-		CompositeWellDensity gen = new CompositeWellDensity(comp, type, flow,
+		CompositeWellDensity gen =new CompositeWellDensity(comp, type, flow,
 				frame, bucket);
 		String msg = null;
 		String file = getImageFile();
 		p("About to compute image " + file);
 		try {
 			if (this.curbfflag != null) msg = gen.createCompositeImages(progress, file, curbfflag);
-			else msg = gen.createCompositeImages(progress, this.curscoreflag);
+			else {
+				 
+				  try {
+					  p("About to compute gen.createCompositeImages");
+					  msg = gen.createCompositeImages(progress, this.curscoreflag);
+				  }
+				  catch (Exception e) {
+					  err(ErrorHandler.getString(e));
+				  }
+			}
 			p("Image " + file + " computed");
 
 		} catch (Throwable e) {

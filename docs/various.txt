@@ -1,0 +1,19 @@
+http://nog.ite/TSL?restartApplication&
+res_dir=
+
+/var/www/output/Home/Auto_M5--121-R25373_3280_169903/sigproc_results/block_X0_Y0/
+
+/ion-data/results/M5/R_2012_08_22_16_44_01_user_M5--121-R25373/
+
+http://nog.ite/TSL?restartApplication&res_dir=/var/www/output/Home/Auto_VEG-405-r25177_3147_160906/&raw_dir=/ion-data/results/Vega/R_2012_08_16_15_19_06_user_VEG-405-r25177/
+
+
+http://ioneast.ite:8080/IgvServlet/igv?
+
+sessionURL=
+http://aruba.apg.per.na.ab.applera.net/output2/Home/Auto_BEL-615--R147318-W2_neutrad-BSO_13100_18794/plugin_out/friend_of_variant_caller_out/systematic_mutated_DH10B/rawlib.bam
+
+&locus=systematic_genome:275737-275739&genome=systematic_mutated_DH10B&maxHeapSize=512m&initialHeapSize=128m
+
+ ----------------
+ http://blackbird.ite:8080/TSL?restartApplication&res_dir=/var/www/output/Home/Auto_PIN-308-r25670_3500_179193/&raw_dir=/ion-data/results/Pinto/R_2012_08_28_21_05_15_user_PIN-308-r25670/

@@ -30,7 +30,7 @@ public abstract class WindowOpener extends CustomComponent implements Window.Clo
  //   private Button openbutton;  // Button for opening the window
     // Button closebutton; // A button in the window
     //   Label explanation; // A descriptive text
-    private int location_x, location_y;
+    protected int location_x, location_y;
     private String name;
     private Layout winlayout;
     private int width, height;
@@ -99,6 +99,7 @@ public abstract class WindowOpener extends CustomComponent implements Window.Clo
         isOpen = false;
         p("Closing window " + name);
         appwindow.removeWindow(mywindow);
+        app.close(this);
        // openbutton.setEnabled(true);
         
         // for debugging

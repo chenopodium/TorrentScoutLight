@@ -41,7 +41,7 @@ public class HelpWindow extends WindowOpener {
 	//TabSheet tabsheet;
 
 	public HelpWindow(TSVaadin app, Window main, String description, int x, int y) {
-		super("Help", main, description, x, y, 600, 650);
+		super("Help", main, description, x, y, 600, 670);
 		this.app = app;
 	}
 
@@ -86,7 +86,7 @@ public class HelpWindow extends WindowOpener {
 		Accordion accordion = new Accordion();
 		accordion.setSizeFull();
 		Panel panel = new Panel();
-		panel.setWidth("540px");
+		panel.setWidth("570px");
 		panel.setHeight("540px");
 		panel.addComponent(accordion);
 		// Trim its layout to allow the Accordion take all space.

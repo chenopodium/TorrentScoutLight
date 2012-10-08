@@ -55,9 +55,7 @@ public class CompositeImage implements StreamResource.StreamSource {
         this.progress = progress;
         if (comp != null) {
             pan = new CompositeDensityPanel(comp, null);           
-        //    p("Created density panel for flag "+flag);
-           
-            pan.setFlag(flag);
+            p("Created density panel for flag "+flag);
 
         }
     }

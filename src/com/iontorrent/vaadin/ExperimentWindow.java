@@ -11,7 +11,9 @@ import java.util.logging.Logger;
 import com.iontorrent.expmodel.CompositeExperiment;
 import com.iontorrent.expmodel.ExperimentContext;
 import com.iontorrent.sequenceloading.SequenceLoader;
+import com.iontorrent.vaadin.utils.DataDialog;
 import com.iontorrent.vaadin.utils.FileBrowserWindow;
+import com.iontorrent.vaadin.utils.TextDialog;
 import com.iontorrent.vaadin.utils.WindowOpener;
 import com.vaadin.terminal.ThemeResource;
 import com.vaadin.terminal.UserError;
@@ -197,7 +199,7 @@ public class ExperimentWindow extends WindowOpener {
 			}
 
 		});
-
+		
 		Button help = new Button();
 		help.setDescription("Click me to get information on this window");
 		help.setIcon(new ThemeResource("img/help-hint.png"));
@@ -207,9 +209,32 @@ public class ExperimentWindow extends WindowOpener {
 				 app.showHelpMessage("Help", getHelpMessage());
 			}
 		});
+		
+		Button link = new Button();
+		link.setIcon(new ThemeResource("img/link.png"));
+		link.setDescription("Generate URL that automatically opens this experiment - copy it and paste it later on");
+		h.addComponent(link, 2, y);
+		// Handle button clicks
+		link.addListener(new Button.ClickListener() {
+
+			public void buttonClick(Button.ClickEvent event) {
+				// If the field value is bad, set its error.
+				// (Allow only alphanumeric characters.)
+				generateLink();
+			}
+
+		});
+
 		if (check)  checkFolders();
 	}
 
+	private void generateLink() {
+		if (exp == null) return;
+		//blackbird.itw?restartApplication&res_dir=/var/www/output/Home/D10-155-r25428_full_25346/&raw_dir=/ion-data/results/d10/R_2012_08_23_14_07_36_user_D10-155-r25428/
+		String url = "http://"+app.getServer()+"/TSL?restartApplication&res_dir="+exp.getResultsDirectory()+"&raw_dir="+exp.getRawDir();
+		TextDialog dia = new TextDialog(app.getMainWindow(), "Link", url);
+		
+	}
 	public String getHelpMessage() {
 		String msg = "<ul>";
 		msg += "<li>check the folders to make sure you have the correct paths</li>";
@@ -274,10 +299,15 @@ public class ExperimentWindow extends WindowOpener {
 			if (name != null) {
 				exp.setResultsName(name);
 			}
+			
 			String raw = app.getParameters("raw_dir");
 			if (raw != null) {
 				exp.setRawDir(raw);
 				check = true;
+			}
+			String db = app.getParameters("db");
+			if (db != null) {
+				exp.setServerUrl(db);
 			}
 			String sff = app.getParameters("sff");
 			if (sff != null) {

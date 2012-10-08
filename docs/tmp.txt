@@ -1,0 +1,14 @@
+Hi Scott,
+
+Interesting - I will investigate why it can't find the package. In the meantime, or in case someone else also has this problem, I put the .deb files out to GitHub:
+
+https://github.com/chenopodium/TorrentScoutLight
+
+You can right-click on the two .deb files (ion-torrentscout and ion-jk) and save them locally.
+TSL depends on ion-jk, so that has to be installed first. To install TSL via the .deb file directly, enter (here, there are really two -- :-). 
+
+sudo dpkg --install --auto-deconfigure ion-jk_3.0.1_amd64.deb
+sudo dpkg --install ion-torrentscout-light_3.0.4_amd64.deb
+
+(the auto-deconfigure is for those with old TSL installations that would conflict with ion-jk, and so it will automatically remove it)
+(for ion-jk, a sudo apt-get install ion-jk should also work)

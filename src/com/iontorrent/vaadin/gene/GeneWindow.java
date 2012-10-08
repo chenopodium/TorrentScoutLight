@@ -71,6 +71,12 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener,
 
 		// super.openbutton.setEnabled(false);
 	}
+	public void setGenomepos(long pos) {
+		this.genomepos = pos;
+	}
+	public void setReference(String ref) {
+		this.selectedref = ref;
+	}
 
 	@Override
 	public void openButtonClick(Button.ClickEvent event) {
@@ -103,21 +109,41 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener,
 		sel = new Select();
 		sel.setDescription("Chromosome/Reference");
 		sel.setNullSelectionAllowed(false);
-		SequenceLoader loader = SequenceLoader.getSequenceLoader(this.exp);
-
-		SamUtils sam = loader.getSamUtils();
-		boolean has = false;
-		if (sam != null) {
-
-			ArrayList<String> refs = sam.getReferenceNames();
-
-			for (String ref : refs) {
-				sel.addItem(ref);
-				if (!has) {
-					sel.select(ref);
-					sel.setValue(ref);
+		
+		
+		try {
+			SequenceLoader loader = SequenceLoader.getSequenceLoader(this.exp);
+			p("Got loader with bam file:"+loader.getBamFile());
+			SamUtils sam = loader.getSamUtils();
+			boolean has = false;
+			if (sam != null) {
+				//p("Got sam utils");
+				ArrayList<String> refs = sam.getReferenceNames();
+				//p("Got refs: "+refs);
+				if (refs != null) {
+					
+					for (String ref : refs) {
+					//	p("adding ref "+ref);
+						if (ref != null ){
+							sel.addItem(ref);
+							
+							if (!has) {
+								sel.select(ref);
+								sel.setValue(ref);
+								has= true;
+							}
+						}
+				//		else p("One of the refs was null");
+					}
+			//		p("added refs");
 				}
+				else p("Found no references in BAM file");
 			}
+			else p("got no SamUtils, maybe missing bam file?"+loader.getBamFile()+", "+loader.foundBamFile());
+		}
+		catch (Throwable e) {
+			p("Got a problem with sequenceloader");
+			err(ErrorHandler.getString(e));
 		}
 
 		sel.setImmediate(true);
@@ -282,6 +308,9 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener,
 		}
 		selectedref = (String) sel.getValue();
 
+		findGenes();
+	}
+	public void findGenes() {
 		if (indicator != null) {
 			hor.removeComponent(indicator);
 		}
@@ -456,7 +485,7 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener,
 	}
 
 	private static void p(String msg) {
-		// system.out.println("GeneWindow: " + msg);
+		System.out.println("GeneWindow: " + msg);
 		Logger.getLogger(GeneWindow.class.getName()).log(Level.INFO, msg);
 	}
 

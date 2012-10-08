@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+case "$1" in
+	configure)    
+        # create link to startup background image
+        if [ -f /results/plugins/torrentscout/startup.png ]; then
+            if [ -f /var/www/tsl-startup.png ]; then
+                rm /var/www/tsl-startup.png
+            fi
+            ln -s /results/plugins/torrentscout/startup.png /var/www/tsl-startup.png 
+        fi            
+    ;;
+esac
+
+exit 0
