@@ -1,3 +1,9 @@
+ion-torrentscout-light (3.0.751) lucid; urgency=low
+
+  * added community suggestions (better mask editing etc) 
+
+ -- root <Chantal Roth <chantal.roth@lifetech.com>  Mon, 02 Jul 2012 13:04:31 -0700
+
 ion-torrentscout-light (3.0.71) lucid; urgency=low
 
   * normalized heatmaps

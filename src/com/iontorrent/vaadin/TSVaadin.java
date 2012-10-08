@@ -76,7 +76,7 @@ import com.vaadin.ui.Window.Notification;
 public class TSVaadin extends Application implements
 		HttpServletRequestListener, ParameterHandler {
 
-	public static String VERSION = "3.0.75";
+	public static String VERSION = "3.0.751";
 
 	static {
 		Logger.global.setLevel(Level.WARNING);
@@ -110,6 +110,8 @@ public class TSVaadin extends Application implements
 	private WindowOpener alignWindow;
 	private WindowOpener compWindow;
 	private WindowOpener maskeditWindow;
+	private WindowOpener regionalmaskeditWindow;
+	private ArrayList<WindowOpener> regionalmaskeditWindows;
 	private ArrayList<WindowOpener> maskeditWindows;
 	private WindowOpener testWindow;
 	private WindowOpener xyWindow;
@@ -292,10 +294,10 @@ public class TSVaadin extends Application implements
 		add(it, this.rawWindow);
 		add(it, this.xyWindow);
 		add(it, "Export data (ionograms, alignments, raw data)",
-				this.maskeditWindow);
+				this.regionalmaskeditWindow);
 		add(it, "Compute and view custom heat maps", this.maskeditWindow);
-		add(it, this.barcodeTable, "View barcode table");
-		add(it, this.barcodeWindow, "View barcode heat maps");
+		add(it, this.barcodeTable, "Barcode table");
+		add(it, this.barcodeWindow, "Barcode specific heat maps");
 
 		it = menu.addItem("|", null);
 
@@ -305,7 +307,7 @@ public class TSVaadin extends Application implements
 		add(it, this.rawWindow);
 		add(it, this.processWindow);
 		add(it, this.fitWindow);
-		add(it, this.maskeditWindow);
+		add(it, this.regionalmaskeditWindow);
 		add(it, this.automateWindow);
 		add(it, this.regionalWindow);
 		add(it, this.regionalPropWindow);
@@ -459,6 +461,7 @@ public class TSVaadin extends Application implements
 				"Compute mean signal for an entire area of a selected mask",
 				x + 500, y);
 		createMaskEditWindow(y, x, false);
+		createRegionalMaskEditWindow(y, x, false);
 
 		xyWindow = new XYWindow(
 				this,
@@ -504,11 +507,24 @@ public class TSVaadin extends Application implements
 
 		// main.addComponent(layout);
 	}
+	public void createRegionalMaskEditWindow(int y, int x, boolean open) {
+		
+		WindowOpener win = new MaskEditWindowCanvas(this, main,
+				"View and export regional mask data to file based on a mask",
+				x, y, true);
+		if (regionalmaskeditWindows == null) {
+			regionalmaskeditWindows = new ArrayList<WindowOpener>();
+			
+		}
+		if (regionalmaskeditWindow == null) regionalmaskeditWindow = win;
+		regionalmaskeditWindows.add(win);
+		if(open) win.open();
+	}
 	public void createMaskEditWindow(int y, int x, boolean open) {
 		
 		WindowOpener win = new MaskEditWindowCanvas(this, main,
-				"View and edit masks, and export data to file based on a mask",
-				x, y);
+				"View and create custom masks",
+				x, y, false);	
 		if (maskeditWindows == null) {
 			maskeditWindows = new ArrayList<WindowOpener>();
 			
@@ -918,10 +934,18 @@ public class TSVaadin extends Application implements
 		exp.getWellContext().setCoordinate(mid);
 		exp.getWellContext().setSelection(sel);
 		tableWindow.reopen();
-
 		
-		for (WindowOpener et: etWindows) {
-			et.clear();
+		for (WindowOpener win: etWindows) {
+			win.clear();
+			win.reopen();
+		}
+		for (WindowOpener win: regionalmaskeditWindows) {
+			win.clear();
+			win.reopen();
+		}
+		for (WindowOpener win: maskeditWindows) {
+			win.clear();
+			win.reopen();
 		}
 		this.scoreWindow.clear();
 		this.barcodeWindow.clear();
@@ -992,7 +1016,7 @@ public class TSVaadin extends Application implements
 		} else {
 			processWindow.reopen();
 		}
-		reopenMaskedit(false);
+		reopenRegionalMaskedit(false);
 	}
 
 	public void reopenFit() {
@@ -1010,12 +1034,32 @@ public class TSVaadin extends Application implements
 		}
 	}
 
+	public void reopenRegionalMaskedit(boolean open) {
+		if (!regionalmaskeditWindow.isOpen()) {
+			if (open)
+				regionalmaskeditWindow.open();
+		} else {
+			regionalmaskeditWindow.reopen();
+		}
+	}
 	public void reopenMaskedit(boolean open) {
 		if (!maskeditWindow.isOpen()) {
 			if (open)
 				maskeditWindow.open();
 		} else {
 			maskeditWindow.reopen();
+		}
+	}
+	public void reopenOtherRegionalMaskedit(boolean open) {
+		for (WindowOpener win: this.regionalmaskeditWindows) {
+			if (win != this.regionalmaskeditWindow) {
+				if (!win.isOpen()) {
+					if (open)
+						win.open();
+				} else {
+					win.reopen();
+				}
+			}
 		}
 	}
 	public void reopenOtherMaskedit(boolean open) {
@@ -1355,7 +1399,12 @@ public class TSVaadin extends Application implements
 		if (etWindows != null) {
 			etWindows.remove(win);			
 		}
-		if (maskeditWindows != null) maskeditWindows.remove(win);
+		if (regionalmaskeditWindows != null) {
+			regionalmaskeditWindows.remove(win);			
+		}
+		if (maskeditWindows != null) {
+			maskeditWindows.remove(win);			
+		}		
 		
 	}
 }

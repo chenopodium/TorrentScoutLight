@@ -133,13 +133,18 @@ public class AutomateWindow extends WindowOpener implements Button.ClickListener
 				app.setWellCoordinate(coord);
 			}
 		}
-		app.reopenMaskedit(true);
+		app.reopenRegionalMaskedit(true);
 		exp = app.getExperimentContext();
 		maincont = app.getExplorerContext();
 		if (maincont.getRasterSize()>MAX_RASTER) {
 			// make smaller
 			app.showMessage("Using smaller area", "I am reducing the visible chip size to "+MAX_RASTER+", otherwise there could be an out of memory error :-)");
 			maincont.setRasterSize(MAX_RASTER);
+		}
+		if (maincont.getRasterSize() < 50) {
+			// make smaller
+			app.showMessage("Using larger area", "I am increasing the area used to " + 100);
+			maincont.setRasterSize(100);
 		}
 		RasterData data = maincont.getData();
 

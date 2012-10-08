@@ -18,13 +18,15 @@ public class AreaSelect {
 	ExperimentContext exp;
 	Select.ValueChangeListener listener;
 	int maxsize;
+	int currentsize;
 	
-	public AreaSelect(TSVaadin app, ExplorerContext maincont, Select.ValueChangeListener listener, int maxsize) {
+	public AreaSelect(TSVaadin app, ExplorerContext maincont, Select.ValueChangeListener listener, int maxsize, int currentsize) {
 		this.maincont = maincont;
 		this.app = app;
 		 exp = maincont.getExp();
 		 this.listener = listener;
 		 this.maxsize = maxsize;
+		 this.currentsize = currentsize;
 	}
 		
 	public void addComponents(AbstractLayout hor){
@@ -38,21 +40,19 @@ public class AreaSelect {
 		if (maxsize > 100) rastersel.addItem("200 x 200");
 		if (maxsize > 200) rastersel.addItem("400 x 400");
 		if (maxsize > 400) rastersel.addItem("800 x 800");
-		if (maxsize > 800) rastersel.addItem("1600 x 1600");
-		if (maxsize > 800) rastersel.addItem("chip size");
+		//if (maxsize > 800) rastersel.addItem("1600 x 1600");
+		//if (maxsize > 800) rastersel.addItem("chip size");
 		rastersel.setWidth("100px");
-		int size = maincont.getRasterSize();
+			
 		
-		
-		if (size <= 0)
-			size = Math.max(exp.getNrcols(), exp.getNrrows());
-		p("Got raster size from maincont: " + size);
-		
-		
-		if (size == 25 || size == 100 || size == 200 || size == 400 || size == 800 || size == 1600) {
-			rastersel.select(size + " x " + size);
+		if (currentsize <= 0) currentsize = 100;
+				
+		p("Currentsize is "+currentsize);
+		if (currentsize == 25 || currentsize == 100 || currentsize == 200 || currentsize == 400 || currentsize == 800 || currentsize == 1600) {
+			rastersel.select(currentsize + " x " + currentsize);
 		} else
 			rastersel.select("chip size");
+		
 		rastersel.addListener(new Select.ValueChangeListener() {
 
 			@Override
@@ -70,11 +70,17 @@ public class AreaSelect {
 						p("Could not parse: " + val);
 					}
 				}
-				if (size != maincont.getRasterSize()) {
-					maincont.setRasterSize(size);					
-					app.reopenOtherMaskedit(false);
-					app.reopenProcess(false);
-					app.reopenFit();
+				if (size != currentsize) {
+					currentsize = size;
+					p("Got new rastersize selection: "+size);
+					if (maxsize > 0 || maxsize < 2000) {
+						p("Setting raster size to : "+size);
+						maincont.setRasterSize(size);
+						app.reopenProcess(false);
+						app.reopenFit();
+						app.reopenOtherRegionalMaskedit(false);
+					}
+										
 					if (listener != null) listener.valueChange(event);
 				}
 			}
@@ -83,6 +89,9 @@ public class AreaSelect {
 
 		hor.addComponent(new Label(" Area:"));
 		hor.addComponent(rastersel);
+	}
+	public int getCurrentSize() {
+		return currentsize;
 	}
 	
 	private static void p(String msg) {

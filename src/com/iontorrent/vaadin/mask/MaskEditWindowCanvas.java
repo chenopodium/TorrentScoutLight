@@ -12,6 +12,7 @@ import java.util.logging.Logger;
 import com.iontorrent.expmodel.CompositeExperiment;
 import com.iontorrent.expmodel.DatBlock;
 import com.iontorrent.expmodel.ExperimentContext;
+import com.iontorrent.guiutils.heatmap.GradientPanel;
 import com.iontorrent.rawdataaccess.wells.BfMask;
 import com.iontorrent.rawdataaccess.wells.BfMaskFlag;
 import com.iontorrent.rawdataaccess.wells.BitMask;
@@ -26,6 +27,7 @@ import com.iontorrent.vaadin.utils.AreaSelect;
 import com.iontorrent.vaadin.utils.CoordSelect;
 import com.iontorrent.vaadin.utils.ExportTool;
 import com.iontorrent.vaadin.utils.FileBrowserWindow;
+import com.iontorrent.vaadin.utils.GradientLegend;
 import com.iontorrent.vaadin.utils.InputDialog;
 import com.iontorrent.vaadin.utils.OptionsDialog;
 import com.iontorrent.vaadin.utils.ZoomControl;
@@ -93,12 +95,16 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 	Component selectedtab = null;
 	int bucket;
 	ZoomControl zoom;
-
-	public MaskEditWindowCanvas(TSVaadin app, Window main, String description, int x, int y) {
-		super("Edit masks and export", main, description, x, y, 490, 500);
+	int masksize;
+	AreaSelect rastersel;
+	boolean regional;
+	
+	public MaskEditWindowCanvas(TSVaadin app, Window main, String description, int x, int y, boolean regional) {
+		super((regional ? "Regional mask view and regional export" : "Edit and view custom masks (full chip)") , main, description, x, y, 490, 500);
 		this.app = app;
 		bucket = 0;
-
+		masksize = 0;
+		this.regional = regional;
 	}
 
 	@Override
@@ -276,29 +282,31 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 
 		mywindow.addComponent(tabsheet);
 
-		pickLayout = new VerticalLayout();
-		// chartTab.addComponent(new Label("Chart"));
-		tabsheet.addTab(pickLayout);
-		tabsheet.getTab(pickLayout).setCaption("Pick Masks");
-
+		if (regional) {
+			pickLayout = new VerticalLayout();
+			// chartTab.addComponent(new Label("Chart"));
+			tabsheet.addTab(pickLayout);
+			tabsheet.getTab(pickLayout).setCaption("Pick Masks (for Automate)");
+			addPickGui(pickLayout);
+		}
+		
 		editLayout = new VerticalLayout();
 		tabsheet.addTab(editLayout);
 		tabsheet.getTab(editLayout).setCaption("View/Save");
-
-		calcLayout = new VerticalLayout();
-		// chartTab.addComponent(new Label("Chart"));
-		tabsheet.addTab(calcLayout);
-		tabsheet.getTab(calcLayout).setCaption("Calculate");
+		addEditorGui(editLayout);
+		
+		if (!regional) {
+			calcLayout = new VerticalLayout();
+			// chartTab.addComponent(new Label("Chart"));
+			tabsheet.addTab(calcLayout);
+			tabsheet.getTab(calcLayout).setCaption("Calculate");
+			addCalcGui(calcLayout);
+		}
 
 		VerticalLayout helpLayout = new VerticalLayout();
 		// chartTab.addComponent(new Label("Chart"));
 		tabsheet.addTab(helpLayout);
 		tabsheet.getTab(helpLayout).setCaption("Help");
-
-		addEditorGui(editLayout);
-
-		addCalcGui(calcLayout);
-		addPickGui(pickLayout);
 		addHelpGui(helpLayout);
 
 		if (selectedtab == null)
@@ -581,25 +589,35 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 
 		maskselect.addGuiElements(hor);
 
-		int size = maincont.getRasterSize();
+		if (regional) masksize = maincont.getRasterSize();
+		else if (masksize == 0)  masksize = Math.max(exp.getNrcols(), exp.getNrrows());
+			
+		if (masksize ==0 && regional) {
+			masksize = 100;
+			maincont.setRasterSize(masksize);
+		}
 		
-		AreaSelect rastersel = new AreaSelect(app, maincont, new Select.ValueChangeListener() {
-			@Override
-			public void valueChange(ValueChangeEvent event) {					
-				selectedtab = editLayout;
-				reopen();
-				
-			}
-		}, -1);
-		rastersel.addComponents(hor);
+		if (regional ) {
+			rastersel = new AreaSelect(app, maincont, new Select.ValueChangeListener() {
+				@Override
+				public void valueChange(ValueChangeEvent event) {					
+					selectedtab = editLayout;
+					masksize = rastersel.getCurrentSize();
+					bucket = 0;
+					reopen();				
+				}
+			}, 800, masksize);
+			rastersel.addComponents(hor);
+		}
 		
 		if (bucket == 0) {
-			if (size <= 400) bucket = 1;
-			else if (size <= 800) bucket = 2;
-			else if (size <= 1400) bucket = 5;
-			else if (size <= 2800) bucket = 10;
+			if (masksize <= 400) bucket = 1;
+			else if (masksize <= 800) bucket = 2;
+			else if (masksize <= 1400) bucket = 5;
+			else if (masksize <= 2800) bucket = 10;
 			else bucket = 15;
 		}
+		p("Got mask size: "+masksize+" and bucket="+bucket);
 	
 		coordsel = new CoordSelect(exp.getWellContext().getCoordinate().getX() + exp.getColOffset(), exp.getWellContext().getCoordinate().getY() + exp.getRowOffset(), this);
 		coordsel.addGuiElements(hor);
@@ -609,10 +627,13 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 		addwin.setIcon(new ThemeResource("img/addwindow.png"));		
 		addwin.addListener(new Button.ClickListener() {
 			public void buttonClick(Button.ClickEvent event) {
-				int x= location_x+100;
-				int y= location_y+50;
+				int x= location_x+200;
+				int y= location_y+100;
+				
 				if (x > 900) x = 1;
-				app.createMaskEditWindow(x, y, true);
+				if (y > 400) y = 50;
+				if (regional) app.createRegionalMaskEditWindow(x, y, true);
+				else app.createMaskEditWindow(x, y, true);
 			}
 		});
 		hor.addComponent(addwin);
@@ -747,12 +768,12 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 
 	}
 
-	private void addMaskPanel(AbstractOrderedLayout v, BitMask curmask) {
+	private void addMaskPanel(AbstractOrderedLayout hor, BitMask curmask) {
 		p("Creating bitmask image with " + curmask + " at coord " + curmask.getRelCoord());
-		final MaskImage mimage = new MaskImage(maincont, curmask, bucket);
+		final MaskImage mimage = new MaskImage(maincont, curmask, bucket, masksize, regional);
 
 		StreamResource imageresource = new StreamResource((StreamResource.StreamSource) mimage, exp.getFileKey() + "_" + exp.getWellContext().getAbsoluteCoordinate().getX() + "_"
-				+ exp.getWellContext().getAbsoluteCoordinate().getY() + curmask.getName() + "_" + maincont.getRasterSize() + "_" + (int) (Math.random() * 1000) + ".png", app);
+				+ exp.getWellContext().getAbsoluteCoordinate().getY() + curmask.getName() + "_" + masksize + "_" + (int) (Math.random() * 1000) + ".png", app);
 		imageresource.setCacheTime(100);
 		// app.getMainWindow().open(imageresource, "_blank");
 		int width = Math.max(mimage.getImage().getWidth() + 100, 600);
@@ -773,7 +794,29 @@ public class MaskEditWindowCanvas extends WindowOpener implements Property.Value
 
 		String bg = app.getBgUrl(imageresource.getApplication().getRelativeLocation(imageresource));
 		canvasmask.setBackgroundImage(bg);
-		v.addComponent(canvasmask);
+		
+		
+		final GradientPanel grad = mimage.getGradient();
+		grad.setInPercent(true);
+		GradientLegend leg = new GradientLegend(this.bucket*bucket, grad,
+				new GradientLegend.Recipient() {
+
+					@Override
+					public void minOrMaxChanged() {
+						p("Min or max changed");
+						gradmin = (int) grad.getMin();
+						gradmax = (int) grad.getMax();
+						mimage.setMin(gradmin);
+						mimage.setMax(gradmax);
+						mimage.repaint();
+						// app.showMessage("Gradient",
+						// "This is not fully working yet :-)");
+						reopen();
+
+					}
+				}, app, mimage.getImage().getHeight(), (int) canvasmask.getHeight());
+		leg.addGuiElements(hor);
+		hor.addComponent(canvasmask);
 
 		canvasmask.addListener(new Canvas.CanvasMouseUpListener() {
 			@Override

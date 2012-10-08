@@ -309,6 +309,7 @@ public class FitWindowCanvas extends WindowOpener {
 //		}
 		p("need to reopen process and mask edit and automate");
 		app.reopenProcess(false);
+		app.reopenRegionalMaskedit(false);
 		app.reopenMaskedit(false);
 		app.reopenAutomate();
 	}

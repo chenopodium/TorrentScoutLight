@@ -14,6 +14,7 @@ import java.util.logging.Logger;
 
 import javax.imageio.ImageIO;
 
+import com.iontorrent.guiutils.heatmap.GradientPanel;
 import com.iontorrent.rawdataaccess.wells.BitMask;
 import com.iontorrent.torrentscout.explorer.ExplorerContext;
 import com.iontorrent.torrentscout.explorer.MaskEditDensityPanel;
@@ -36,19 +37,36 @@ public class MaskImage implements StreamResource.StreamSource {
 	MaskEditDensityPanel pan;
 	RenderedImage image;
 	BitMask mask;
-	public MaskImage(ExplorerContext exp, BitMask mask, int bucket) {
+	public MaskImage(ExplorerContext exp, BitMask mask, int bucket, int masksize, boolean regional) {
 		this.exp = exp;
 		if (exp != null) {
 			this.mask = mask;
 			if (mask != null) mask.wakeUp();
 			//p("Creating mask image for :"+mask.getName()+" at "+mask.getRelCoord());
-			 pan = new MaskEditDensityPanel(exp.getExp(), mask, exp.getRasterSize());
+			 pan = new MaskEditDensityPanel(exp.getExp(), mask, masksize, regional);
 			 image = null;
 			 pan.setContext(mask, bucket);
 			 pan.redrawImage();
 			 
 			
 		}
+	}
+	 public void repaint() {
+	    	image = null;
+	    
+	    	pan.redrawImage();
+	    	getImage();
+	    }
+	public GradientPanel getGradient() {
+		return pan.getGradient();
+	}
+	public void setMin(int gradmin) {
+		pan.setMin(gradmin);
+		
+	}
+	public void setMax(int gradmin) {
+		pan.setMax(gradmin);
+		
 	}
 	
 	/*

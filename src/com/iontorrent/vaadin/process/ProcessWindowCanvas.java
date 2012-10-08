@@ -164,12 +164,12 @@ public class ProcessWindowCanvas extends WindowOpener {
 		maincont.setRelativeCenterAreaCoord(coord);
 		if (maincont.getRasterSize() > MAX_RASTER) {
 			// make smaller
-			app.showMessage("Using smaller area", "I am reducing the visible chip size to " + MAX_RASTER + ", otherwise there could be an out of memory error :-)");
+			app.showMessage("Using smaller area", "I am reducing the visible size to " + MAX_RASTER + ", otherwise there could be an out of memory error :-)");
 			maincont.setRasterSize(MAX_RASTER);
 		}
 		if (maincont.getRasterSize() < 50) {
 			// make smaller
-			app.showMessage("Using larger area", "I am increasing the visible chip size to " + 100);
+			app.showMessage("Using larger area", "I am increasing visible area size to " + 100);
 			maincont.setRasterSize(100);
 		}
 		if (!coord.equals(maincont.getAbsCenterAreaCoord())) {
@@ -248,8 +248,8 @@ public class ProcessWindowCanvas extends WindowOpener {
 			public void valueChange(ValueChangeEvent event) {
 				reopen();
 			}
-		}, 400);
-		rastersel.addComponents(hor);
+		}, 800, maincont.getRasterSize());
+		rastersel.addComponents(h);
 
 		TypeSelection typesel = new TypeSelection(maincont, type, new Property.ValueChangeListener() {
 			@Override
