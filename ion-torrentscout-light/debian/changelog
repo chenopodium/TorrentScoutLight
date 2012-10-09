@@ -1,3 +1,9 @@
+ion-torrentscout-light (3.0.752) lucid; urgency=low
+
+  * JkMountCopy All added
+
+ -- root <Chantal Roth <chantal.roth@lifetech.com>  Tue, 03 Jul 2012 10:01:11 -0700
+
 ion-torrentscout-light (3.0.751) lucid; urgency=low
 
   * added community suggestions (better mask editing etc) 
