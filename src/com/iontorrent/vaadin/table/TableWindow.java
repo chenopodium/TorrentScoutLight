@@ -316,7 +316,7 @@ public class TableWindow extends WindowOpener implements Button.ClickListener,
 					public void gotInput(String name) {
 						if (name == null || name.trim().length() < 1)
 							return;
-						app.parseAndShowReads("user selected reads", name);
+						app.parseAndShowReads("User selected reads", name);
 					}
 
 				}, "Y9VO3:752:234, Y9VO3:777:176, 34.54, 102/1234");

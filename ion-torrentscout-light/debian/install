@@ -3,3 +3,4 @@
 ./internal.war /var/lib/tomcat6/webapps/
 ./LogServlet.war /var/lib/tomcat6/webapps/
 ./ion-tsl.conf /etc/apache2/conf.d/
+./ion-tsl-logrotate.conf /etc/logrotate.d/

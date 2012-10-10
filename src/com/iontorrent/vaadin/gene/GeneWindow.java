@@ -62,6 +62,7 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener,
 	ArrayList<Read> reads;
 	String selectedref;
 	WorkThread t;
+	String reference;
 
 	public GeneWindow(TSVaadin app, Window main, String description, int x,
 			int y) {
@@ -73,9 +74,11 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener,
 	}
 	public void setGenomepos(long pos) {
 		this.genomepos = pos;
+		
 	}
 	public void setReference(String ref) {
 		this.selectedref = ref;
+		
 	}
 
 	@Override
@@ -88,7 +91,7 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener,
 			return;
 		}
 		SequenceLoader loader = SequenceLoader.getSequenceLoader(this.exp);
-		if (!loader.getBamFile().exists()) {
+		if (loader.getBamFile() == null || !loader.getBamFile().exists()) {
 			app.showMessage(
 					"No BAM",
 					"Can't find a BAM file:"
@@ -145,14 +148,16 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener,
 			p("Got a problem with sequenceloader");
 			err(ErrorHandler.getString(e));
 		}
-
+		if (this.selectedref != null) sel.setValue(selectedref);
 		sel.setImmediate(true);
 
 		txt = new TextField();
-		txt.setValue("1234");
+		
 		txt.setWidth("70px");
 		txt.setDescription("Enter a genome location (a number)");
 		txt.setImmediate(true);
+		if (this.genomepos>0) txt.setValue(genomepos);
+		else txt.setValue("1102346");
 		hor.addComponent(sel);
 		hor.addComponent(txt);
 
@@ -266,7 +271,12 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener,
 				exp.makeRelative(coord);
 				exp.setFlow(flow);
 				app.setWellCoordinate(coord, false);
-				// app.reopenAlign();
+				//app.reopenAlign();
+				app.reopenIonogram();
+				app.getRawWindow().setFlow(flow);
+				app.getProcessWindow().setFlow(flow);
+				app.reopenProcess(false);
+				app.reopenRaw();
 			}
 		});
 		mywindow.addComponent(table);
@@ -363,8 +373,8 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener,
 		protected Void doInBackground() {
 			try {
 
-				app.showMessage("Searching...", "Finding reads at position "
-						+ genomepos);
+//				app.showMessage("Searching...", "Finding reads at position "
+//						+ genomepos);
 				// result
 				SequenceLoader loader = SequenceLoader.getSequenceLoader(exp);
 				indicator.setValue(new Float(0.05));
@@ -385,8 +395,8 @@ public class GeneWindow extends WindowOpener implements Button.ClickListener,
 
 				WellSelection sel = new WellSelection(coords);
 				sel.setTitle("Reads at position " + genomepos);
-				app.showMessage("Got result",
-						"Loading info on " + coords.size() + " found wells...");
+				app.showMessage("Found reads in BAM file at "+genomepos,
+						"Loading details on " + coords.size() + " found wells...");
 				sel.loadDataForWells(exp.getWellContext().getMask());
 				app.setWellSelection(sel);
 				indicator.setValue(new Float(0.8));

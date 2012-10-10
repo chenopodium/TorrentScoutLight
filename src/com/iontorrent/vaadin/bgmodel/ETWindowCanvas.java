@@ -82,7 +82,7 @@ public class ETWindowCanvas extends WindowOpener implements
 			int y) {
 		super("Bf Heat Map", main, description, x, y, 800, 600);
 		this.app = app;
-		bucket = 5;
+		bucket = 8;
 	}
 
 	@Override
@@ -119,9 +119,9 @@ public class ETWindowCanvas extends WindowOpener implements
 		exp = app.getExperimentContext();
 
 		if (oldexp == null || exp != oldexp) {
-			if (exp.is318())
+			if (exp.is318() || exp.getNrcols()>3000)
 				bucket = 15;
-			else if (exp.is316())
+			else if (exp.is316() || exp.getNrcols()>2000)
 				bucket = 10;
 		}
 		oldexp = exp;

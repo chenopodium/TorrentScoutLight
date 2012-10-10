@@ -107,7 +107,7 @@ public class ProcessWindowCanvas extends WindowOpener {
 		super("Process (many wells)", main, description, x, y, 1350, 580);
 		this.app = app;
 		frame = 15;
-		flow = 0;
+		flow = -1;
 
 	}
 
@@ -849,13 +849,16 @@ public class ProcessWindowCanvas extends WindowOpener {
 		}
 		return c;
 	}
+	public void setFlow(int flow) {
+		this.flow = flow;
+	}
 
 	public void addCoordAndFlowSelection(HorizontalLayout h) {
 		tflow = new TextField();
 		tflow.setWidth("60px");
 		// tflow.setHeight("25px");
 		tflow.setImmediate(true);
-
+		if (flow < 0) flow = exp.getFlow();
 		String s = "" + flow;
 		tflow.setValue(s);
 		tflow.setDescription("Enter the zero based flow number");

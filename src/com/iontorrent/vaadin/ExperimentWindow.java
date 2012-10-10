@@ -40,6 +40,8 @@ public class ExperimentWindow extends WindowOpener {
 	TextField sff;
 	TextField bam;
 
+	private ExecuteWhenDone executer;
+	
 	public ExperimentWindow(TSVaadin app, Window main, String description, int x, int y) {
 		super("Pick folders", main, description, x, y, 570, 350);
 		this.app = app;
@@ -339,6 +341,11 @@ public class ExperimentWindow extends WindowOpener {
 			p("Trying to find bam with sequence loader in results folder:" + file);
 			if (file != null) exp.setBamFilename(new File(file).getName());
 		}
+		if (!exp.hasBam()) {
+			String file = SequenceLoader.findFile("basecaller.bam", exp.getBasecallerDir(), false, "tf.bamf", false);
+			p("Trying to find bam with sequence loader in basecaller folder:" + file);
+			if (file != null) exp.setBamFilename(new File(file).getName());
+		}
 		if (!exp.hasSff()) {
 			String file = SequenceLoader.findFile(".sff", exp.getBasecallerDir(), false, "tf.sff", false);
 			p("Trying to find sff with sequence loader:" + file);
@@ -357,7 +364,7 @@ public class ExperimentWindow extends WindowOpener {
 		
 		if (!exp.hasBam()) {
 			p("Got no bam, using rawtf");
-			exp.setBamFilename("rawtf.bam");
+			exp.setBamFilename("rawlib.bam");
 		}
 		return check;
 	}
@@ -466,8 +473,9 @@ public class ExperimentWindow extends WindowOpener {
 			app.setCompositeExperiment(comp);
 			// exp = comp.getThumbnailsContext();
 		}
-
-		app.showExperiment();
+		
+		app.showExperiment(getExecuter());
+		setExecuter(null);
 		if (close) close();
 	}
 
@@ -516,6 +524,14 @@ public class ExperimentWindow extends WindowOpener {
 	private static void p(String msg) {
 		//system.out.println("ExperimentWindow: " + msg);
 		Logger.getLogger(ExperimentWindow.class.getName()).log(Level.INFO, msg);
+	}
+
+	ExecuteWhenDone getExecuter() {
+		return executer;
+	}
+
+	void setExecuter(ExecuteWhenDone executer) {
+		this.executer = executer;
 	}
 
 }

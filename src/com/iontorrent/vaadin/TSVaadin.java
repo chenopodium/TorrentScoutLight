@@ -76,7 +76,7 @@ import com.vaadin.ui.Window.Notification;
 public class TSVaadin extends Application implements
 		HttpServletRequestListener, ParameterHandler {
 
-	public static String VERSION = "3.0.751";
+	public static String VERSION = "3.0.753";
 
 	static {
 		Logger.global.setLevel(Level.WARNING);
@@ -127,6 +127,8 @@ public class TSVaadin extends Application implements
 	private File logfolder;
 	private VerticalLayout mainLayout;
 	private WellSelection inputReads;
+	private boolean hasreads;
+	private String read_names;
 	private static final String PERFSTATS = "tsl_perfstats.csv";
 	private static final String MODSTATS = "tsl_modulestats.csv";
 	private static final String LOGDIRS[] = {
@@ -706,9 +708,10 @@ public class TSVaadin extends Application implements
 		// check if we have raw_dir and results_dir
 		boolean hasraw = false;
 		boolean hasres = false;
-		boolean hasreads = false;
+		hasreads = false;
 		boolean searchdb = false;
-		String read_names = null;
+		String searchterm = null;
+		read_names = null;
 		String resdir = null;
 		for (; it.hasNext();) {
 			String key = "" + it.next();
@@ -725,8 +728,10 @@ public class TSVaadin extends Application implements
 					hasres = true;
 					resdir = value;
 				}
-				else if (key.equalsIgnoreCase("searchdb"))
+				else if (key.equalsIgnoreCase("searchdb")) {
 					searchdb = true;
+					searchterm = value;
+				}
 				else if (key.equalsIgnoreCase("read_names")) {
 					hasreads = true;
 					read_names = value;
@@ -750,17 +755,26 @@ public class TSVaadin extends Application implements
 			if (hasres) {
 				p("Got results folder in url: "+resdir);
 				this.showMessage("Searching db for experiment", resdir);
-				exp = db.searchDbByResDir(resdir);
+				exp = db.searchDbByTerm(resdir);
+				if (exp == null && searchterm != null) exp = db.searchDbByTerm(searchterm);
 				if (exp != null) {
-					p("Got exp:"+exp);
-					if (hasreads) {				
-						parseAndShowReads("Reads from URL", read_names);								
-					}
-					showExpContext(exp);					
+					p("WE FOUND THE EXPERIMENT:"+exp);					
+					showExpContext(exp,new ExecuteWhenDone() {
+
+						@Override
+						public void execute() {
+							if (hasreads) {				
+								parseAndShowReads("reads from URL",  read_names);								
+							}	
+						}
+						
+					});	
+					
+					expWindow.handleOk();
 				}
 				else {
 					p("Got no exp for "+resdir);
-					this.showMessage("Found no experiment for", resdir);
+					this.showMessage("Found no experiment for", resdir+ (searchterm != null? " or "+searchterm : ""));
 				}
 			}
 			else {
@@ -768,21 +782,18 @@ public class TSVaadin extends Application implements
 			}
 			 
 		}
-		if (hasraw || hasres) {
+		else if (hasraw || hasres) {
 			this.expWindow.open();
 			expWindow.handleOk();
-			if (hasreads) {				
-				parseAndShowReads("Reads from URL", read_names);								
-			}			
+					
 		} else
 			main.showNotification("Select an analysis in the db",
 					"<br/>Browse the database and select an analysis to view",
 					Window.Notification.TYPE_HUMANIZED_MESSAGE);
-		// dbWindow.open();
-		
+		// dbWindow.open();		
 	}
 
-	public void parseAndShowReads(String title, String read_names) {
+	public void parseAndShowReads(String tit, String read_names) {
 		// parse read names
 		String sep = "_";
 		if (read_names.indexOf(",")>-1) sep = ",";
@@ -790,11 +801,14 @@ public class TSVaadin extends Application implements
 		else if (read_names.indexOf("/")>-1) sep = "/";
 		else if (read_names.indexOf("-")>-1) sep = "-";
 		
-		p("Got read names: "+read_names);
+		
 		ArrayList<String> names = StringTools.parseList(read_names, sep);
 		ArrayList<WellCoordinate> coords = new ArrayList<WellCoordinate>();
 		
 		WellCoordinate first = null;
+		p("Got read names: "+read_names);
+		p("--> "+names.size()+" reads");
+		String title = names.size()+" "+tit;
 		for (String name: names) {	
 			WellCoordinate coord = null;
 			if (!Character.isDigit(name.charAt(0))){
@@ -825,12 +839,24 @@ public class TSVaadin extends Application implements
 		}
 		WellSelection sel = new WellSelection(coords);
 		sel.setTitle(title);
+		p("Coords in wellselection: "+sel.getNrWells());
 		inputReads = sel;
 		if (exp != null) {
 			exp.getWellContext().setSelection(sel);
-			this.tableWindow.open();
+			this.tableWindow.reopen();
 		}
 		setWellCoordinate(first, false);
+		if (exp != null) p("Coords in wellselection after setting first coord as selected: "+exp.getWellContext().getNrWells());
+		if (this.getParameters("location") != null) {
+			p("Got a location in parameters, should open gene finder");
+			GeneWindow gene = ((GeneWindow)geneWindow);
+			long loc = Long.parseLong(getParameters("location"));
+			String chr = this.getParameters("chromosome");
+			gene.setReference(chr);
+			gene.setGenomepos(loc);
+			gene.open();
+			gene.findGenes();
+		}
 //		if (exp.hasSff() || exp.hasWells()) ionoWindow.open();
 //		if (exp.hasBam()) this.alignWindow.open();
 //		this.tableWindow.reopen();
@@ -905,6 +931,9 @@ public class TSVaadin extends Application implements
 		return loader;
 	}
 	public void showExperiment() {
+		showExperiment(null);
+	}
+	public void showExperiment(ExecuteWhenDone executer) {
 		if (exp == null) {
 			return;
 		}
@@ -971,15 +1000,9 @@ public class TSVaadin extends Application implements
 		// if (exp.hasBam()) alignWindow.open();
 		// if(exp.getWellContext() != null &&
 		// exp.getWellContext().getCoordinate()!=null) rawWindow.open();
-		if (this.getParameters("location") != null) {
-			p("Got a location in parameters, should open gene finder");
-			GeneWindow gene = ((GeneWindow)geneWindow);
-			long loc = Long.parseLong(getParameters("location"));
-			String chr = this.getParameters("chromosome");
-			gene.setReference(chr);
-			gene.setGenomepos(loc);
-			gene.open();
-			gene.findGenes();
+		
+		if (executer != null) {
+			executer.execute();
 		}
 	}
 
@@ -991,12 +1014,19 @@ public class TSVaadin extends Application implements
 	}
 
 	public void showExpContext(ExperimentContext context) {
+		this.showExpContext(context, null);
+	}
+	public void showExpContext(ExperimentContext context, ExecuteWhenDone executer) {
 		this.exp = context;
 		logModule("Experiment", "open " + context.getResultsName());
+		expWindow.setExecuter(executer);
 		expWindow.setContext(context);
 		expWindow.open();
 	}
 
+	public RawWindow getRawWindow() {
+		return (RawWindow)rawWindow;
+	}
 	public void reopenRaw() {
 		if (!rawWindow.isOpen()) {
 			// rawWindow.open();
@@ -1126,7 +1156,7 @@ public class TSVaadin extends Application implements
 			processWindow.reopen();
 		if (this.maskeditWindow.isOpen())
 			this.maskeditWindow.reopen();
-		// movieWindow.reopen();
+		
 	}
 
 	public void setWellSelection(WellSelection sel) {
@@ -1368,7 +1398,14 @@ public class TSVaadin extends Application implements
 			alignWindow.reopen();
 		}
 	}
+	public void reopenIonogram() {
+		if (!this.ionoWindow.isOpen()) {
+			ionoWindow.open();
 
+		} else {
+			ionoWindow.reopen();
+		}
+	}
 	public void reopenAutomate() {
 		if (!this.automateWindow.isOpen()) {
 			// automateWindow.open();

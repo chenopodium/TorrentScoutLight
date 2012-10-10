@@ -32,6 +32,7 @@ import com.iontorrent.scout.experimentviewer.exptree.Q20BasesNodeFilter;
 import com.iontorrent.scout.experimentviewer.exptree.Q20MaxLenNodeFilter;
 import com.iontorrent.scout.experimentviewer.exptree.RunFullNodeFilter;
 import com.iontorrent.scout.experimentviewer.exptree.RunResDirNodeFilter;
+import com.iontorrent.scout.experimentviewer.exptree.RunSearchNodeFilter;
 import com.iontorrent.scout.experimentviewer.options.PersistenceHelper;
 import com.iontorrent.utils.ErrorHandler;
 import com.iontorrent.utils.io.FileTools;
@@ -94,7 +95,7 @@ public class DbWindow extends WindowOpener {
 	Link link;
 	NodeFilter expfilter;
 	NodeFilter resultsfilter;
-	int default_days = 14;
+	int default_days = 21;
 	private TSVaadin app;
 	private String URL;
 	List<RundbExperiment> allexperiments;
@@ -556,7 +557,7 @@ public class DbWindow extends WindowOpener {
 		if (getURL() == null) {
 			return;
 		}
-		app.showMessage("Trying to access db " + getURL() + "....", "Browse DB");
+		//app.showMessage("Trying to access db " + getURL() + "....", "Browse DB");
 		PersistenceHelper persist = new PersistenceHelper();
 		entityManager = null;
 		boolean ok = persist.setURL(getURL());
@@ -613,9 +614,23 @@ public class DbWindow extends WindowOpener {
 		if (last > 0 && last+1 < resdir.length()) {
 			resdir = resdir.substring(last);
 		}
-		p("Finding results containing resdir: "+resdir);
+		p("====== Finding results containing resdir: "+resdir);
 		resultsfilter = new RunResDirNodeFilter(resdir);
-		return searchDb(null, resultsfilter);
+		ExperimentContext exp= searchDb(null, resultsfilter);
+		
+		return exp;
+	}
+	public ExperimentContext searchDbByTerm(String term) {
+		if (term.endsWith("/")) term = term.substring(0, term.length()-1);
+		int last = term.lastIndexOf("/");
+		if (last > 0 && last+1 < term.length()) {
+			term = term.substring(last);
+		}
+		p("====== Finding results containing term: "+term);
+		resultsfilter = new RunSearchNodeFilter(term);
+		ExperimentContext exp= searchDb(null, resultsfilter);
+		
+		return exp;
 	}
 	public ExperimentContext searchDb(NodeFilter expfilter, NodeFilter resultsfilter) {
 		this.resultsfilter = resultsfilter;
@@ -640,6 +655,8 @@ public class DbWindow extends WindowOpener {
 		if (res != null) {
 			return(this.selectRun(res));
 		}
+		this.resultsfilter  = null;
+		this.expfilter = null;
 		return null;
 	}
 
@@ -655,8 +672,16 @@ public class DbWindow extends WindowOpener {
 			if (lastexperiments.size() < 1)
 				lastexperiments = allexperiments;
 			p("afterGotFilter: Nr of LAST experiments: " + lastexperiments.size());
+			if (lastexperiments.size() < 30) {
+				// lets load more 
+				this.default_days = default_days*2;
+				expfilter = new ExpDateNodeFilter(default_days);
+				filtertitle = "Past " + default_days + " days";
+				lastexperiments = filterExperiments(allexperiments, expfilter);
+				p("afterGotFilter: Nr of LAST experiments with more days "+default_days+": " + lastexperiments.size());
+			}
 			lastrigs = buildTreeFromRigsAndExperiments(lastexperiments);
-			p("Created rig list");
+			//p("Created rig list");
 			lastresults = MyRig.getListOfResults(lastrigs);
 			long topq20bases = MyResult.getTopQ20Bases(lastresults, 20);
 			long topq20max = MyResult.getTopQ20MaxReadLen(lastresults, 20);
@@ -769,9 +794,9 @@ public class DbWindow extends WindowOpener {
 				for (RundbResults res : exp.getRundbResultsCollection()) {
 					MyResult myres = new MyResult(res, rig);
 					if (resultfilter != null) {
-						if (count < 10) {
-							p("Filtering "+myres.getResultsName()+":"+resultfilter.passes(myres));
-						}
+//						if (count < 10) {
+//							p("Filtering "+myres.getResultsName()+":"+resultfilter.passes(myres));
+//						}
 					}
 					count++;
 					if (resultfilter == null || resultfilter.passes(myres)) {

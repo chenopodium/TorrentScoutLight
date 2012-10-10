@@ -30,22 +30,24 @@ case "$1" in
 		sed -i 's:\(<!-- Define an AJP 1.3 Connector on port 8009 -->\):\1\n<!--port 8009 enabled by Ion. Edited by debian/postinst -->\n<Connector port="8009" protocol="AJP/1.3" redirectPort="8443" />:'	$conffile		
 	fi	
 				
-	# Edit /etc/tomcat6/tomcat-users.xml
-	# Default has numerous commented-out example entries so here, we remove any existing
-	# entries for tomcat user, and add our required entry outside of any comment tags.
-	conffile=/etc/tomcat6/tomcat-users.xml
-	# Delete any entries that conflict with ours
-	sed -i '/.*<user username="tomcat" password="tomcat".*/d' $conffile        
 	
-	# Add ours outside of comment tags: search for opening tag and insert on line after.
-	sed -i 's/\(<tomcat-users>\)/\1\n  <user username="tomcat" password="tomcat" roles="admin, manager, manager-gui"\/>/' $conffile        
-		  
 	# ion internal server configuration
-	if [ -f /opt/ion/.ion-internal-server ]; then
+	if [ -e /opt/ion/.ion-internal-server ]; then
 		echo "Internal servers configuration option called: copying internal.war to torrentscout.war in /var/lib/tomcat6/webapps"
-		# Do something here ...
+		
 		rm /var/lib/tomcat6/webapps/torrentscout.war
 		cp /var/lib/tomcat6/webapps/internal.war /var/lib/tomcat6/webapps/torrentscout.war
+		
+		# Edit /etc/tomcat6/tomcat-users.xml - but only for our internal version
+		# Default has numerous commented-out example entries so here, we remove any existing
+		# entries for tomcat user, and add our required entry outside of any comment tags.
+		conffile=/etc/tomcat6/tomcat-users.xml
+		# Delete any entries that conflict with ours
+		sed -i '/.*<user username="tomcat" password="tomcat".*/d' $conffile        
+		
+		# Add ours outside of comment tags: search for opening tag and insert on line after.
+		sed -i 's/\(<tomcat-users>\)/\1\n  <user username="tomcat" password="tomcat" roles="admin, manager, manager-gui"\/>/' $conffile        
+		  
 	fi
 	
 	if [ -f /var/lib/tomcat6/webapps/internal.war ]; then		
@@ -65,14 +67,17 @@ case "$1" in
 	# ionadmin should have permissions to make changes if needed
 	chmod go+rw /var/lib/tomcat6/webapps
 	chmod go+rw /var/lib/tomcat6/webapps/*
-	
-	# start the server		
+			
+	# (re) start the server		
 	/etc/init.d/tomcat6 start
-	# only if apache is actually installed
+	
+	# only if apache is actually installed - which may not be the case on compute nodes, for instance
 	if [ -f /etc/init.d/apache2 ]; then		
+		#enable mod jk
+		a2enmod jk
 		/etc/init.d/apache2 reload
 	else
-		echo "I see no apache installatin, and I found no ion-jk package. To get rid of the port 8080 numbers, please install apache and ion-jk:"			
+		echo "I see no apache installation. To get rid of the port 8080 numbers, please install apache and ion-jk:"			
 	fi
     ;;
 esac

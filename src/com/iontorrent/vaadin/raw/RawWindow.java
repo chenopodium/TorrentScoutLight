@@ -237,6 +237,10 @@ public class RawWindow extends WindowOpener implements Button.ClickListener, Pro
         TransOptions t = new TransOptions();
         t.createGui(tab);
     }
+    public void setFlow(int flow) {
+    	flows = new ArrayList<Integer>();
+        flows.add(flow);
+    }
 
     public void addCoordAndFlowSelection(HorizontalLayout h) {
         tflow = new TextField();
@@ -245,8 +249,9 @@ public class RawWindow extends WindowOpener implements Button.ClickListener, Pro
         tflow.setImmediate(true);
         if (flows == null) {
             flows = new ArrayList<Integer>();
-            flows.add(0);
+            flows.add(exp.getFlow());
         }
+        
         String s = "" + flows;
         tflow.setValue(s.substring(1, s.length() - 1));
         h.addComponent(new Label("Flow(s):"));
